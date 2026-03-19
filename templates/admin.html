@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel dos Noivos · T & V</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body class="admin-body">
+
+  <!-- ── Login Screen ── -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="login-monogram">T <span>✦</span> V</div>
+      <h2 class="login-title">Painel dos Noivos</h2>
+      <p class="login-subtitle">Acesso restrito</p>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input class="form-input" type="password" id="adminPassword" placeholder="••••••••" />
+      </div>
+      <p class="login-error hidden" id="loginError">Senha incorreta.</p>
+      <button class="btn-primary btn-block" id="loginBtn">Entrar</button>
+    </div>
+  </div>
+
+  <!-- ── Admin Panel ── -->
+  <div class="admin-panel hidden" id="adminPanel">
+
+    <aside class="admin-sidebar">
+      <div class="sidebar-brand">
+        <span class="sidebar-monogram">T ✦ V</span>
+        <span class="sidebar-label">Painel</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="dashboard">Visão geral</button>
+        <button class="nav-item" data-tab="gifts">Presentes</button>
+        <button class="nav-item" data-tab="choices">Escolhas</button>
+      </nav>
+      <button class="sidebar-logout" id="logoutBtn">Sair</button>
+    </aside>
+
+    <div class="admin-content">
+
+      <!-- Dashboard Tab -->
+      <div class="tab-panel active" id="tab-dashboard">
+        <h2 class="panel-title">Visão Geral</h2>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card">
+            <span class="stat-value" id="stat-total">—</span>
+            <span class="stat-label">Presentes escolhidos</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-confirmed">—</span>
+            <span class="stat-label">Confirmados</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-pix">—</span>
+            <span class="stat-label">Valor Pix esperado</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-pix-confirmed">—</span>
+            <span class="stat-label">Pix confirmado</span>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle" style="margin-top:2rem">Últimas escolhas</h3>
+        <div class="choices-list" id="recentChoices"></div>
+      </div>
+
+      <!-- Gifts Tab -->
+      <div class="tab-panel hidden" id="tab-gifts">
+        <div class="panel-header">
+          <h2 class="panel-title">Gerenciar Presentes</h2>
+          <button class="btn-primary" id="addGiftBtn">+ Novo item</button>
+        </div>
+        <div class="gifts-table-wrap">
+          <table class="admin-table" id="giftsTable">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Qtd máx.</th>
+                <th>Escolhidos</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="giftsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Choices Tab -->
+      <div class="tab-panel hidden" id="tab-choices">
+        <h2 class="panel-title">Todas as Escolhas</h2>
+        <div class="choices-filters">
+          <select class="form-input" id="choicesFilter" style="max-width:200px">
+            <option value="all">Todos os status</option>
+            <option value="pending">Pendente</option>
+            <option value="confirmed">Confirmado</option>
+          </select>
+        </div>
+        <div class="choices-list full" id="allChoices"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Modal: Add/Edit Gift ── -->
+  <div class="modal-overlay hidden" id="giftModal">
+    <div class="modal" style="max-width:500px">
+      <button class="modal-close" id="giftModalClose">&times;</button>
+      <h3 class="modal-section-title" id="giftModalTitle">Novo Presente</h3>
+      <input type="hidden" id="editGiftId" />
+
+      <div class="form-group">
+        <label class="form-label">Nome do item <span class="required">*</span></label>
+        <input class="form-input" type="text" id="giftName" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-textarea" id="giftDescription" rows="2"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Valor (R$) <span class="required">*</span></label>
+          <input class="form-input" type="number" id="giftPrice" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Qtd. máxima</label>
+          <input class="form-input" type="number" id="giftMaxQty" min="1" value="1" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select class="form-input" id="giftCategory">
+          <option>Cozinha</option>
+          <option>Quarto</option>
+          <option>Banheiro</option>
+          <option>Sala</option>
+          <option>Decoração</option>
+          <option>Contribuição</option>
+          <option>Geral</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL da imagem</label>
+        <input class="form-input" type="url" id="giftImageUrl" placeholder="https://..." />
+      </div>
+      <div class="form-group form-group--check">
+        <input type="checkbox" id="giftIsMonetary" />
+        <label class="form-label" for="giftIsMonetary">Contribuição livre (sem limite de escolhas)</label>
+      </div>
+      <div class="form-group form-group--check">
+        <input type="checkbox" id="giftIsActive" checked />
+        <label class="form-label" for="giftIsActive">Ativo no catálogo</label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="giftModalCancel">Cancelar</button>
+        <button class="btn-primary" id="giftModalSave">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>

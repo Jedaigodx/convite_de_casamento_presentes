@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Presentes · Thatianna & Vinicius</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header class="site-header">
+    <div class="header-leaves header-leaves--left"></div>
+    <div class="header-leaves header-leaves--right"></div>
+    <div class="header-inner">
+      <p class="header-eyebrow">Save the Date · 25.04.26</p>
+      <h1 class="header-monogram">T <span class="monogram-divider">✦</span> V</h1>
+      <h2 class="header-title">Thatianna <em>&</em> Vinicius</h2>
+      <p class="header-subtitle">Lista de Presentes</p>
+      <div class="header-divider"></div>
+      <p class="header-note">Escolha um presente e faça parte desse momento especial.<br>Cada item foi selecionado com carinho.</p>
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main class="site-main">
+
+    <!-- Filter Bar -->
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" data-cat="all">Todos</button>
+      <button class="filter-btn" data-cat="Cozinha">Cozinha</button>
+      <button class="filter-btn" data-cat="Quarto">Quarto</button>
+      <button class="filter-btn" data-cat="Banheiro">Banheiro</button>
+      <button class="filter-btn" data-cat="Contribuição">Contribuição</button>
+    </div>
+
+    <!-- Catalog Grid -->
+    <section class="catalog" id="catalog">
+      <div class="catalog-loading" id="catalogLoading">
+        <div class="spinner"></div>
+        <p>Carregando presentes...</p>
+      </div>
+      <div class="catalog-grid" id="catalogGrid"></div>
+      <div class="catalog-empty hidden" id="catalogEmpty">
+        <p>Nenhum item disponível nesta categoria.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer class="site-footer">
+    <div class="footer-leaves"></div>
+    <p class="footer-names">Thatianna & Vinicius</p>
+    <p class="footer-date">25 de Abril de 2026</p>
+  </footer>
+
+  <!-- ── Modal: Choose Gift ── -->
+  <div class="modal-overlay hidden" id="chooseModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" id="chooseModalClose" aria-label="Fechar">&times;</button>
+
+      <!-- Step 1: Item summary -->
+      <div class="modal-step" id="step1">
+        <p class="modal-eyebrow">Você escolheu</p>
+        <h3 class="modal-item-name" id="modalItemName"></h3>
+        <p class="modal-item-price" id="modalItemPrice"></p>
+        <p class="modal-item-desc" id="modalItemDesc"></p>
+
+        <!-- Monetary: custom amount -->
+        <div class="form-group hidden" id="monetaryAmountGroup">
+          <label class="form-label">Valor da contribuição (R$)</label>
+          <input class="form-input" type="number" id="monetaryAmount" min="10" step="10" placeholder="Ex: 100" />
+        </div>
+
+        <p class="modal-question">Como deseja presentear?</p>
+        <div class="delivery-options">
+          <button class="delivery-btn" data-method="wedding">
+            <span class="delivery-icon">○</span>
+            Entregar no casamento
+          </button>
+          <button class="delivery-btn" data-method="pix">
+            <span class="delivery-icon">○</span>
+            Enviar via Pix
+          </button>
+        </div>
+        <button class="btn-primary btn-block" id="step1Next" disabled>Continuar</button>
+      </div>
+
+      <!-- Step 2: Giver info -->
+      <div class="modal-step hidden" id="step2">
+        <p class="modal-eyebrow">Quase lá</p>
+        <h3 class="modal-section-title">Seus dados</h3>
+        <div class="form-group">
+          <label class="form-label">Seu nome <span class="required">*</span></label>
+          <input class="form-input" type="text" id="giverName" placeholder="Como você gostaria de ser chamado" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mensagem para os noivos <span class="optional">(opcional)</span></label>
+          <textarea class="form-textarea" id="giverMessage" rows="4" placeholder="Escreva algo especial para Thatianna e Vinicius..."></textarea>
+        </div>
+        <div class="step2-actions">
+          <button class="btn-secondary" id="step2Back">Voltar</button>
+          <button class="btn-primary" id="step2Confirm">Confirmar presente</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Pix / Confirmation -->
+      <div class="modal-step hidden" id="step3">
+        <div class="step3-wedding hidden" id="step3Wedding">
+          <div class="confirmation-icon">✓</div>
+          <h3 class="modal-section-title">Presente confirmado!</h3>
+          <p class="confirmation-text">Que alegria! <strong id="confirmedName"></strong>, obrigada por escolher este presente.<br>Traga no dia do casamento, <strong>25 de Abril de 2026</strong>.</p>
+          <p class="confirmation-message-preview" id="confirmedMessage"></p>
+        </div>
+
+        <div class="step3-pix hidden" id="step3Pix">
+          <div class="confirmation-icon">✓</div>
+          <h3 class="modal-section-title">Presente confirmado!</h3>
+          <p class="confirmation-text">Obrigada, <strong id="confirmedNamePix"></strong>!<br>Use o QR Code ou a chave Pix abaixo para concluir.</p>
+          <div class="pix-box">
+            <div class="pix-qr" id="pixQrCode">
+              <div class="spinner"></div>
+            </div>
+            <div class="pix-details">
+              <div class="pix-detail-row">
+                <span class="pix-label">Valor</span>
+                <span class="pix-value" id="pixAmount"></span>
+              </div>
+              <div class="pix-detail-row">
+                <span class="pix-label">Favorecido</span>
+                <span class="pix-value" id="pixName"></span>
+              </div>
+              <div class="pix-detail-row">
+                <span class="pix-label">Chave Pix</span>
+                <span class="pix-value pix-key-value" id="pixKey"></span>
+              </div>
+            </div>
+          </div>
+          <button class="btn-copy" id="copyPixKey">Copiar chave Pix</button>
+        </div>
+
+        <button class="btn-secondary btn-block" id="step3Close" style="margin-top:1.5rem">Fechar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
