@@ -137,8 +137,8 @@
   overflow-x: auto;
 }
 
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel { display: none !important; }
+.tab-panel.active { display: block !important; }
 
 .panel-title {
   font-family: var(--font-display);

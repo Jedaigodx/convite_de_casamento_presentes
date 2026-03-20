@@ -366,7 +366,11 @@ def admin_stats():
 
 @app.route('/health')
 def health():
-    return jsonify({'status': 'ok'})
+    try:
+        count = GiftItem.query.count()
+        return jsonify({'status': 'ok', 'db': 'connected', 'items': count})
+    except Exception as e:
+        return jsonify({'status': 'ok', 'db': 'error', 'detail': str(e)}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
