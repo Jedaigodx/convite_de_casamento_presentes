@@ -19,133 +19,137 @@
       <p class="header-eyebrow">Save the Date · 25.04.26</p>
       <h1 class="header-monogram">T <span class="monogram-divider">✦</span> V</h1>
       <h2 class="header-title">Thatianna <em>&</em> Vinicius</h2>
-      <p class="header-subtitle">Lista de Presentes</p>
+      <p class="header-subtitle">Lua de Mel & Experiências</p>
       <div class="header-divider"></div>
-      <p class="header-note">. <h1 class="header-title">C</h1>om muito amor, estamos realizando o sonho do nosso casamento e já temos nosso lar montado com tudo o que precisamos.
-Por isso, se desejarem nos presentear, ficaremos muito felizes com uma contribuição para a nossa lua de mel.</p>
-      <p class="header-note">Qualquer valor será recebido com carinho e fará parte de momentos inesquecíveis da nossa nova história.</p>
+      <p class="header-note">
+        Nosso maior sonho é viver momentos inesquecíveis juntos.<br>
+        Se quiser nos presentear, escolha uma experiência e contribua com o valor que puder.
+      </p>
     </div>
   </header>
 
-  <!-- ── Main ── -->
-  <main class="site-main">
-
-    <!-- Filter Bar -->
-    <div class="filter-bar" id="filterBar">
-      <button class="filter-btn active" data-cat="all">Todos</button>
-      <button class="filter-btn" data-cat="Cozinha">Cozinha</button>
-      <button class="filter-btn" data-cat="Quarto">Quarto</button>
-      <button class="filter-btn" data-cat="Banheiro">Banheiro</button>
-      <button class="filter-btn" data-cat="Contribuição">Contribuição</button>
+  <!-- ── Progress Banner ── -->
+  <div class="trip-banner" id="tripBanner">
+    <div class="trip-banner__inner">
+      <div class="trip-banner__text">
+        <span class="trip-banner__label">Progresso geral da viagem</span>
+        <span class="trip-banner__values" id="bannerValues">carregando...</span>
+      </div>
+      <div class="trip-banner__bar-wrap">
+        <div class="trip-banner__bar">
+          <div class="trip-banner__fill" id="bannerFill" style="width:0%"></div>
+        </div>
+        <span class="trip-banner__pct" id="bannerPct">0%</span>
+      </div>
     </div>
+  </div>
 
-    <!-- Catalog Grid -->
-    <section class="catalog" id="catalog">
-      <div class="catalog-loading" id="catalogLoading">
-        <div class="spinner"></div>
-        <p>Carregando presentes...</p>
-      </div>
-      <div class="catalog-grid" id="catalogGrid"></div>
-      <div class="catalog-empty hidden" id="catalogEmpty">
-        <p>Nenhum item disponível nesta categoria.</p>
-      </div>
-    </section>
-
+  <!-- ── Catalog ── -->
+  <main class="site-main">
+    <div class="catalog-loading" id="catalogLoading">
+      <div class="spinner"></div>
+      <p>Carregando experiências...</p>
+    </div>
+    <div class="catalog-grid" id="catalogGrid"></div>
+    <div class="catalog-empty hidden" id="catalogEmpty">
+      <p>Nenhuma experiência disponível no momento.</p>
+    </div>
   </main>
 
   <!-- ── Footer ── -->
   <footer class="site-footer">
-    <div class="footer-leaves"></div>
     <p class="footer-names">Thatianna & Vinicius</p>
     <p class="footer-date">25 de Abril de 2026</p>
   </footer>
 
-  <!-- ── Modal: Choose Gift ── -->
-  <div class="modal-overlay hidden" id="chooseModal">
+  <!-- ══ Modal ══ -->
+  <div class="modal-overlay hidden" id="modal">
     <div class="modal" role="dialog" aria-modal="true">
-      <button class="modal-close" id="chooseModalClose" aria-label="Fechar">&times;</button>
+      <button class="modal-close" id="modalClose">&times;</button>
 
-      <!-- Step 1: Item summary -->
+      <!-- Step 1: Amount -->
       <div class="modal-step" id="step1">
-        <p class="modal-eyebrow">Você escolheu</p>
-        <h3 class="modal-item-name" id="modalItemName"></h3>
-        <p class="modal-item-price" id="modalItemPrice"></p>
-        <p class="modal-item-desc" id="modalItemDesc"></p>
+        <p class="modal-eyebrow">Contribuir para</p>
+        <h3 class="modal-item-name" id="s1Name"></h3>
 
-        <!-- Monetary: custom amount -->
-        <div class="form-group hidden" id="monetaryAmountGroup">
-          <label class="form-label">Valor da contribuição (R$)</label>
-          <input class="form-input" type="number" id="monetaryAmount" min="10" step="10" placeholder="Ex: 100" />
+        <div class="modal-progress-mini">
+          <div class="modal-progress-mini__bar">
+            <div class="modal-progress-mini__fill" id="s1Fill"></div>
+          </div>
+          <p class="modal-progress-mini__text" id="s1ProgressText"></p>
         </div>
 
-        <p class="modal-question">Como deseja presentear?</p>
-        <div class="delivery-options">
-          <button class="delivery-btn" data-method="wedding">
-            <span class="delivery-icon">○</span>
-            Entregar no casamento
-          </button>
-          <button class="delivery-btn" data-method="pix">
-            <span class="delivery-icon">○</span>
-            Enviar via Pix
-          </button>
+        <p class="modal-question">Quanto você gostaria de contribuir?</p>
+
+        <div class="amount-suggestions" id="amountSuggestions"></div>
+
+        <div class="amount-custom">
+          <span class="amount-prefix">R$</span>
+          <input class="amount-input" type="number" id="amountInput"
+                 min="1" step="1" placeholder="outro valor" />
         </div>
+
         <button class="btn-primary btn-block" id="step1Next" disabled>Continuar</button>
       </div>
 
-      <!-- Step 2: Giver info -->
+      <!-- Step 2: Name + Message -->
       <div class="modal-step hidden" id="step2">
         <p class="modal-eyebrow">Quase lá</p>
         <h3 class="modal-section-title">Seus dados</h3>
+
         <div class="form-group">
           <label class="form-label">Seu nome <span class="required">*</span></label>
-          <input class="form-input" type="text" id="giverName" placeholder="Como você gostaria de ser chamado" />
+          <input class="form-input" type="text" id="giverName"
+                 placeholder="Como você gostaria de ser chamado" />
         </div>
         <div class="form-group">
           <label class="form-label">Mensagem para os noivos <span class="optional">(opcional)</span></label>
-          <textarea class="form-textarea" id="giverMessage" rows="4" placeholder="Escreva algo especial para Thatianna e Vinicius..."></textarea>
+          <textarea class="form-textarea" id="giverMessage" rows="3"
+                    placeholder="Escreva algo especial para Thatianna e Vinicius..."></textarea>
         </div>
+
         <div class="step2-actions">
           <button class="btn-secondary" id="step2Back">Voltar</button>
-          <button class="btn-primary" id="step2Confirm">Confirmar presente</button>
+          <button class="btn-primary" id="step2Confirm">Confirmar</button>
         </div>
       </div>
 
-      <!-- Step 3: Pix / Confirmation -->
+      <!-- Step 3: Pix -->
       <div class="modal-step hidden" id="step3">
-        <div class="step3-wedding hidden" id="step3Wedding">
-          <div class="confirmation-icon">✓</div>
-          <h3 class="modal-section-title">Presente confirmado!</h3>
-          <p class="confirmation-text">Que alegria! <strong id="confirmedName"></strong>, obrigada por escolher este presente.<br>Traga no dia do casamento, <strong>25 de Abril de 2026</strong>.</p>
-          <p class="confirmation-message-preview" id="confirmedMessage"></p>
-        </div>
+        <div class="confirmation-icon">✓</div>
+        <h3 class="modal-section-title">Presente confirmado!</h3>
+        <p class="confirmation-text">
+          Obrigada, <strong id="s3Name"></strong>!<br>
+          Use o QR Code abaixo para concluir sua contribuição via Pix.
+        </p>
 
-        <div class="step3-pix hidden" id="step3Pix">
-          <div class="confirmation-icon">✓</div>
-          <h3 class="modal-section-title">Presente confirmado!</h3>
-          <p class="confirmation-text">Obrigada, <strong id="confirmedNamePix"></strong>!<br>Use o QR Code ou a chave Pix abaixo para concluir.</p>
-          <div class="pix-box">
-            <div class="pix-qr" id="pixQrCode">
-              <div class="spinner"></div>
+        <div class="pix-box">
+          <div class="pix-qr" id="pixQr"><div class="spinner"></div></div>
+          <div class="pix-details">
+            <div class="pix-detail-row">
+              <span class="pix-label">Valor</span>
+              <span class="pix-value" id="s3Amount"></span>
             </div>
-            <div class="pix-details">
-              <div class="pix-detail-row">
-                <span class="pix-label">Valor</span>
-                <span class="pix-value" id="pixAmount"></span>
-              </div>
-              <div class="pix-detail-row">
-                <span class="pix-label">Favorecido</span>
-                <span class="pix-value" id="pixName"></span>
-              </div>
-              <div class="pix-detail-row">
-                <span class="pix-label">Chave Pix</span>
-                <span class="pix-value pix-key-value" id="pixKey"></span>
-              </div>
+            <div class="pix-detail-row">
+              <span class="pix-label">Favorecido</span>
+              <span class="pix-value" id="s3PixName"></span>
+            </div>
+            <div class="pix-detail-row">
+              <span class="pix-label">Chave Pix</span>
+              <span class="pix-value pix-key-value" id="s3PixKey"></span>
             </div>
           </div>
+        </div>
+
+        <div class="pix-copy-wrap">
           <button class="btn-copy" id="copyPixKey">Copiar chave Pix</button>
         </div>
 
-        <button class="btn-secondary btn-block" id="step3Close" style="margin-top:1.5rem">Fechar</button>
+        <div class="s3-message hidden" id="s3MessageWrap">
+          <p class="s3-message__text" id="s3Message"></p>
+        </div>
+
+        <button class="btn-secondary btn-block" id="step3Close" style="margin-top:1.2rem">Fechar</button>
       </div>
 
     </div>

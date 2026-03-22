@@ -11,7 +11,7 @@
 </head>
 <body class="admin-body">
 
-  <!-- ── Login Screen ── -->
+  <!-- ── Login ── -->
   <div class="login-screen" id="loginScreen">
     <div class="login-card">
       <div class="login-monogram">T <span>✦</span> V</div>
@@ -26,7 +26,7 @@
     </div>
   </div>
 
-  <!-- ── Admin Panel ── -->
+  <!-- ── Panel ── -->
   <div class="admin-panel hidden" id="adminPanel">
 
     <aside class="admin-sidebar">
@@ -36,132 +36,155 @@
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" data-tab="dashboard">Visão geral</button>
-        <button class="nav-item" data-tab="gifts">Presentes</button>
-        <button class="nav-item" data-tab="choices">Escolhas</button>
+        <button class="nav-item" data-tab="items">Experiências</button>
+        <button class="nav-item" data-tab="contributions">Contribuições</button>
       </nav>
       <button class="sidebar-logout" id="logoutBtn">Sair</button>
     </aside>
 
     <div class="admin-content">
 
-      <!-- Dashboard Tab -->
+      <!-- ── Dashboard ── -->
       <div class="tab-panel active" id="tab-dashboard">
         <h2 class="panel-title">Visão Geral</h2>
+
+        <!-- Main stats -->
         <div class="stats-grid" id="statsGrid">
-          <div class="stat-card">
-            <span class="stat-value" id="stat-total">—</span>
-            <span class="stat-label">Presentes escolhidos</span>
+          <div class="stat-card stat-card--highlight">
+            <span class="stat-value" id="stat-raised">—</span>
+            <span class="stat-label">Total arrecadado</span>
           </div>
-          <div class="stat-card">
-            <span class="stat-value" id="stat-confirmed">—</span>
-            <span class="stat-label">Confirmados</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="stat-pix">—</span>
-            <span class="stat-label">Valor Pix esperado</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="stat-pix-confirmed">—</span>
+          <div class="stat-card stat-card--highlight">
+            <span class="stat-value" id="stat-confirmed-val">—</span>
             <span class="stat-label">Pix confirmado</span>
           </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-goal">—</span>
+            <span class="stat-label">Meta total</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-contribs">—</span>
+            <span class="stat-label">Contribuições</span>
+          </div>
         </div>
 
-        <h3 class="panel-subtitle" style="margin-top:2rem">Últimas escolhas</h3>
-        <div class="choices-list" id="recentChoices"></div>
+        <!-- Overall progress bar -->
+        <div class="overall-progress" id="overallProgress">
+          <div class="overall-progress__header">
+            <span class="overall-progress__label">Progresso geral da viagem</span>
+            <span class="overall-progress__pct" id="overallPct">0%</span>
+          </div>
+          <div class="overall-progress__track">
+            <div class="overall-progress__fill" id="overallFill" style="width:0%"></div>
+          </div>
+          <p class="overall-progress__caption" id="overallCaption"></p>
+        </div>
+
+        <!-- Per-item progress -->
+        <h3 class="panel-subtitle" style="margin-top:2rem">Por experiência</h3>
+        <div class="items-progress-list" id="itemsProgressList"></div>
+
+        <!-- Recent contributions -->
+        <h3 class="panel-subtitle" style="margin-top:2rem">Últimas contribuições</h3>
+        <div class="contributions-list" id="recentContribs"></div>
       </div>
 
-      <!-- Gifts Tab -->
-      <div class="tab-panel" id="tab-gifts">
+      <!-- ── Items ── -->
+      <div class="tab-panel" id="tab-items">
         <div class="panel-header">
-          <h2 class="panel-title">Gerenciar Presentes</h2>
-          <button class="btn-primary" id="addGiftBtn">+ Novo item</button>
+          <h2 class="panel-title">Gerenciar Experiências</h2>
+          <button class="btn-primary" id="addItemBtn">+ Nova experiência</button>
         </div>
-        <div class="gifts-table-wrap">
-          <table class="admin-table" id="giftsTable">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Categoria</th>
-                <th>Valor</th>
-                <th>Qtd máx.</th>
-                <th>Escolhidos</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="giftsTableBody"></tbody>
-          </table>
-        </div>
+        <div class="items-grid" id="adminItemsGrid"></div>
       </div>
 
-      <!-- Choices Tab -->
-      <div class="tab-panel" id="tab-choices">
-        <h2 class="panel-title">Todas as Escolhas</h2>
-        <div class="choices-filters">
-          <select class="form-input" id="choicesFilter" style="max-width:200px">
+      <!-- ── Contributions ── -->
+      <div class="tab-panel" id="tab-contributions">
+        <h2 class="panel-title">Todas as Contribuições</h2>
+        <div class="panel-filters">
+          <select class="form-input" id="contribFilter" style="max-width:200px">
             <option value="all">Todos os status</option>
             <option value="pending">Pendente</option>
             <option value="confirmed">Confirmado</option>
           </select>
         </div>
-        <div class="choices-list full" id="allChoices"></div>
+        <div class="contributions-list full" id="allContribs"></div>
       </div>
 
     </div>
   </div>
 
-  <!-- ── Modal: Add/Edit Gift ── -->
-  <div class="modal-overlay hidden" id="giftModal">
-    <div class="modal" style="max-width:500px">
-      <button class="modal-close" id="giftModalClose">&times;</button>
-      <h3 class="modal-section-title" id="giftModalTitle">Novo Presente</h3>
-      <input type="hidden" id="editGiftId" />
+  <!-- ── Modal: Add/Edit Item ── -->
+  <div class="modal-overlay hidden" id="itemModal">
+    <div class="modal modal--wide">
+      <button class="modal-close" id="itemModalClose">&times;</button>
+      <h3 class="modal-section-title" id="itemModalTitle">Nova Experiência</h3>
+      <input type="hidden" id="editItemId" />
 
-      <div class="form-group">
-        <label class="form-label">Nome do item <span class="required">*</span></label>
-        <input class="form-input" type="text" id="giftName" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descrição</label>
-        <textarea class="form-textarea" id="giftDescription" rows="2"></textarea>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Valor (R$) <span class="required">*</span></label>
-          <input class="form-input" type="number" id="giftPrice" min="0" step="0.01" />
+      <div class="item-modal-layout">
+        <!-- Left: image upload -->
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-preview" id="uploadPreview">
+            <div class="upload-placeholder" id="uploadPlaceholder">
+              <span class="upload-icon">+</span>
+              <span class="upload-hint">Clique ou arraste uma foto</span>
+              <span class="upload-hint-sub">JPG, PNG ou WebP · máx. 8MB</span>
+            </div>
+            <img class="upload-img hidden" id="uploadImg" alt="Preview" />
+          </div>
+          <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp" class="hidden" />
+          <button class="btn-secondary btn-block" id="chooseFileBtn" style="margin-top:0.6rem;font-size:0.7rem">
+            Escolher foto
+          </button>
+          <p class="upload-status" id="uploadStatus"></p>
+          <input type="hidden" id="itemImageUrl" />
         </div>
-        <div class="form-group">
-          <label class="form-label">Qtd. máxima</label>
-          <input class="form-input" type="number" id="giftMaxQty" min="1" value="1" />
+
+        <!-- Right: fields -->
+        <div class="item-modal-fields">
+          <div class="form-group">
+            <label class="form-label">Nome da experiência <span class="required">*</span></label>
+            <input class="form-input" type="text" id="itemName" placeholder="Ex: Bondinho do Pão de Açúcar" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descrição</label>
+            <textarea class="form-textarea" id="itemDescription" rows="3"
+                      placeholder="Conte um pouco sobre essa experiência..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Meta (R$) <span class="required">*</span></label>
+              <input class="form-input" type="number" id="itemGoal" min="1" step="1" placeholder="Ex: 500" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Categoria</label>
+              <select class="form-input" id="itemCategory">
+                <option>Passeio</option>
+                <option>Hospedagem</option>
+                <option>Gastronomia</option>
+                <option>Transporte</option>
+                <option>Aventura</option>
+                <option>Cultura</option>
+                <option>Viagem</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Ordem de exibição</label>
+              <input class="form-input" type="number" id="itemOrder" min="0" value="0" />
+            </div>
+            <div class="form-group form-group--check" style="align-self:flex-end;padding-bottom:0.2rem">
+              <input type="checkbox" id="itemIsActive" checked />
+              <label class="form-label" for="itemIsActive">Visível no site</label>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Categoria</label>
-        <select class="form-input" id="giftCategory">
-          <option>Cozinha</option>
-          <option>Quarto</option>
-          <option>Banheiro</option>
-          <option>Sala</option>
-          <option>Decoração</option>
-          <option>Contribuição</option>
-          <option>Geral</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">URL da imagem</label>
-        <input class="form-input" type="url" id="giftImageUrl" placeholder="https://..." />
-      </div>
-      <div class="form-group form-group--check">
-        <input type="checkbox" id="giftIsMonetary" />
-        <label class="form-label" for="giftIsMonetary">Contribuição livre (sem limite de escolhas)</label>
-      </div>
-      <div class="form-group form-group--check">
-        <input type="checkbox" id="giftIsActive" checked />
-        <label class="form-label" for="giftIsActive">Ativo no catálogo</label>
-      </div>
+
       <div class="modal-actions">
-        <button class="btn-secondary" id="giftModalCancel">Cancelar</button>
-        <button class="btn-primary" id="giftModalSave">Salvar</button>
+        <button class="btn-secondary" id="itemModalCancel">Cancelar</button>
+        <button class="btn-primary" id="itemModalSave">Salvar experiência</button>
       </div>
     </div>
   </div>

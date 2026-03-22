@@ -1,115 +1,104 @@
-// ─── Token helper ─────────────────────────────────────────────────────────────
+// ─── Token ────────────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'tv_admin_token';
+const getToken  = () => localStorage.getItem(TOKEN_KEY) || '';
+const setToken  = t  => localStorage.setItem(TOKEN_KEY, t);
+const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || '';
-}
-
-function setToken(t) {
-  localStorage.setItem(TOKEN_KEY, t);
-}
-
-function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
-}
-
-// Todas as chamadas admin passam o token no header
-async function adminFetch(url, options = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'X-Admin-Token': getToken(),
-    ...(options.headers || {}),
-  };
-  const res = await fetch(url, { ...options, headers });
+async function api(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Token': getToken(),
+      ...(options.headers || {}),
+    },
+  });
   return res;
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
-const state = { gifts: [], choices: [] };
-
-// ─── DOM ──────────────────────────────────────────────────────────────────────
-const loginScreen  = document.getElementById('loginScreen');
-const adminPanel   = document.getElementById('adminPanel');
-const loginBtn     = document.getElementById('loginBtn');
-const logoutBtn    = document.getElementById('logoutBtn');
-const loginError   = document.getElementById('loginError');
-const adminPassword = document.getElementById('adminPassword');
+const state = { items: [], contributions: [] };
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
-  // Se já tem token salvo, testa se ainda é válido
   if (getToken()) {
-    const res = await fetch('/api/admin/check', {
-      headers: { 'X-Admin-Token': getToken() }
-    });
+    const res  = await fetch('/api/admin/check', { headers: { 'X-Admin-Token': getToken() } });
     const data = await res.json();
-    if (data.logged_in) {
-      showPanel();
-      return;
-    } else {
-      clearToken();
-    }
+    if (data.logged_in) { showPanel(); return; }
+    clearToken();
   }
-
-  loginBtn.addEventListener('click', doLogin);
-  adminPassword.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  document.getElementById('adminPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 async function doLogin() {
-  loginBtn.textContent = 'Entrando...';
-  loginBtn.disabled = true;
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = 'Entrando...';
+  btn.disabled    = true;
   try {
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
+    const res  = await fetch('/api/admin/login', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: adminPassword.value }),
+      body:    JSON.stringify({ password: document.getElementById('adminPassword').value }),
     });
     const data = await res.json();
     if (res.ok && data.token) {
       setToken(data.token);
-      loginError.classList.add('hidden');
+      document.getElementById('loginError').classList.add('hidden');
       showPanel();
     } else {
-      loginError.textContent = data.error || 'Senha incorreta.';
-      loginError.classList.remove('hidden');
+      document.getElementById('loginError').textContent = data.error || 'Senha incorreta.';
+      document.getElementById('loginError').classList.remove('hidden');
     }
-  } catch (e) {
-    loginError.textContent = 'Erro de conexão.';
-    loginError.classList.remove('hidden');
+  } catch {
+    document.getElementById('loginError').textContent = 'Erro de conexão.';
+    document.getElementById('loginError').classList.remove('hidden');
   } finally {
-    loginBtn.textContent = 'Entrar';
-    loginBtn.disabled = false;
+    btn.textContent = 'Entrar';
+    btn.disabled    = false;
   }
 }
 
-async function doLogout() {
-  clearToken();
-  adminPanel.classList.add('hidden');
-  loginScreen.classList.remove('hidden');
-}
-
 function showPanel() {
-  loginScreen.classList.add('hidden');
-  adminPanel.classList.remove('hidden');
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('adminPanel').classList.remove('hidden');
 
-  // Bind events only once
-  logoutBtn.addEventListener('click', doLogout);
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    clearToken();
+    location.reload();
+  });
+
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
-  document.getElementById('addGiftBtn').addEventListener('click', openAddGift);
-  document.getElementById('giftModalClose').addEventListener('click', closeGiftModal);
-  document.getElementById('giftModalCancel').addEventListener('click', closeGiftModal);
-  document.getElementById('giftModalSave').addEventListener('click', saveGift);
-  document.getElementById('choicesFilter').addEventListener('change', renderChoices);
+
+  // Item modal
+  document.getElementById('addItemBtn').addEventListener('click', openAddItem);
+  document.getElementById('itemModalClose').addEventListener('click', closeItemModal);
+  document.getElementById('itemModalCancel').addEventListener('click', closeItemModal);
+  document.getElementById('itemModalSave').addEventListener('click', saveItem);
+
+  // Upload
+  document.getElementById('chooseFileBtn').addEventListener('click', () => {
+    document.getElementById('imageFile').click();
+  });
+  document.getElementById('uploadPreview').addEventListener('click', () => {
+    document.getElementById('imageFile').click();
+  });
+  document.getElementById('imageFile').addEventListener('change', handleFileChange);
+
+  // Contributions filter
+  document.getElementById('contribFilter').addEventListener('change', renderContributions);
 
   loadAll();
 }
 
 async function loadAll() {
-  await Promise.all([loadGifts(), loadChoices()]);
-  loadDashboard();
+  await Promise.all([loadItems(), loadContributions()]);
+  loadStats();
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
@@ -120,197 +109,282 @@ function switchTab(tab) {
   document.getElementById(`tab-${tab}`).classList.add('active');
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-async function loadDashboard() {
+// ─── Stats / Dashboard ────────────────────────────────────────────────────────
+async function loadStats() {
   try {
-    const res = await adminFetch('/api/admin/stats');
+    const res = await api('/api/admin/stats');
     const s   = await res.json();
-    document.getElementById('stat-total').textContent      = s.total_choices ?? '—';
-    document.getElementById('stat-confirmed').textContent  = s.confirmed_choices ?? '—';
-    document.getElementById('stat-pix').textContent        = `R$ ${fmt(s.total_pix_expected ?? 0)}`;
-    document.getElementById('stat-pix-confirmed').textContent = `R$ ${fmt(s.confirmed_pix ?? 0)}`;
+
+    document.getElementById('stat-raised').textContent        = `R$ ${fmt(s.total_raised)}`;
+    document.getElementById('stat-confirmed-val').textContent = `R$ ${fmt(s.confirmed_raised)}`;
+    document.getElementById('stat-goal').textContent          = `R$ ${fmt(s.total_goal)}`;
+    document.getElementById('stat-contribs').textContent      = s.total_contribs;
+
+    // Overall bar
+    document.getElementById('overallPct').textContent      = s.progress_pct + '%';
+    document.getElementById('overallFill').style.width     = s.progress_pct + '%';
+    document.getElementById('overallCaption').textContent  =
+      `R$ ${fmt(s.total_raised)} arrecadado de R$ ${fmt(s.total_goal)}`;
+
+    // Per-item list
+    const listEl = document.getElementById('itemsProgressList');
+    listEl.innerHTML = (s.items_stats || []).map(item => `
+      <div class="item-progress-row">
+        <div class="item-progress-row__header">
+          <span class="item-progress-row__name">${item.name}</span>
+          <span class="item-progress-row__values">
+            <strong>R$ ${fmt(item.raised_amount)}</strong> de R$ ${fmt(item.goal_amount)}
+            &nbsp;·&nbsp; ${item.progress_pct}%
+          </span>
+        </div>
+        <div class="item-progress-row__track">
+          <div class="item-progress-row__fill" style="width:${item.progress_pct}%"></div>
+        </div>
+      </div>
+    `).join('');
+
   } catch (e) {
     console.error('Stats error:', e);
   }
 
-  renderChoiceCards(document.getElementById('recentChoices'), state.choices.slice(0, 5));
+  // Recent contributions
+  renderContribCards(document.getElementById('recentContribs'), state.contributions.slice(0, 6));
 }
 
-// ─── Gifts ────────────────────────────────────────────────────────────────────
-async function loadGifts() {
-  try {
-    const res    = await adminFetch('/api/admin/gifts');
-    state.gifts  = await res.json();
-    if (!Array.isArray(state.gifts)) state.gifts = [];
-    renderGiftsTable();
-  } catch (e) {
-    console.error('Gifts error:', e);
-  }
+// ─── Items ────────────────────────────────────────────────────────────────────
+async function loadItems() {
+  const res    = await api('/api/admin/items');
+  state.items  = await res.json();
+  if (!Array.isArray(state.items)) state.items = [];
+  renderAdminItems();
 }
 
-function renderGiftsTable() {
-  const tbody = document.getElementById('giftsTableBody');
-  if (!state.gifts.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem">Nenhum item cadastrado ainda.</td></tr>';
+function renderAdminItems() {
+  const grid = document.getElementById('adminItemsGrid');
+  if (!state.items.length) {
+    grid.innerHTML = `<p style="color:var(--text-light);font-size:.85rem;padding:1rem 0">
+      Nenhuma experiência cadastrada ainda. Clique em "+ Nova experiência" para começar.</p>`;
     return;
   }
-  tbody.innerHTML = state.gifts.map(g => `
-    <tr>
-      <td>
-        <span class="table-item-name">
-          ${g.name}
-          ${g.is_monetary ? '<small>Contribuição livre</small>' : ''}
-        </span>
-      </td>
-      <td>${g.category}</td>
-      <td>R$ ${fmt(g.price)}</td>
-      <td>${g.is_monetary ? '∞' : g.max_quantity}</td>
-      <td>${g.chosen_quantity}</td>
-      <td><span class="${g.is_active ? 'active-badge' : 'inactive-badge'}">${g.is_active ? 'Ativo' : 'Inativo'}</span></td>
-      <td>
-        <div class="table-actions">
-          <button class="btn-edit"   onclick="openEditGift(${g.id})">Editar</button>
-          <button class="btn-delete" onclick="deleteGift(${g.id})">Remover</button>
+  grid.innerHTML = state.items.map(item => `
+    <div class="admin-item-card">
+      ${item.image_url
+        ? `<img class="admin-item-card__img" src="${item.image_url}" alt="${item.name}" />`
+        : `<div class="admin-item-card__img-placeholder">✈</div>`}
+      <div class="admin-item-card__body">
+        <p class="admin-item-card__name">${item.name}</p>
+        <p class="admin-item-card__meta">
+          R$ ${fmt(item.raised_amount)} de R$ ${fmt(item.goal_amount)} · ${item.progress_pct}%
+          ${!item.is_active ? ' · <span class="inactive-tag">Inativo</span>' : ''}
+        </p>
+        <div class="admin-item-card__progress">
+          <div class="admin-item-card__progress-fill" style="width:${item.progress_pct}%"></div>
         </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// ─── Choices ──────────────────────────────────────────────────────────────────
-async function loadChoices() {
-  try {
-    const res      = await adminFetch('/api/admin/choices');
-    state.choices  = await res.json();
-    if (!Array.isArray(state.choices)) state.choices = [];
-    renderChoices();
-  } catch (e) {
-    console.error('Choices error:', e);
-  }
-}
-
-function renderChoices() {
-  const filter = document.getElementById('choicesFilter')?.value || 'all';
-  const list   = filter === 'all' ? state.choices : state.choices.filter(c => c.status === filter);
-  renderChoiceCards(document.getElementById('allChoices'), list);
-}
-
-function renderChoiceCards(container, choices) {
-  if (!container) return;
-  if (!choices || !choices.length) {
-    container.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;padding:1rem 0">Nenhuma escolha ainda.</p>';
-    return;
-  }
-  container.innerHTML = choices.map(c => `
-    <div class="choice-card">
-      <div class="choice-card__info">
-        <p class="choice-card__name">${c.giver_name}</p>
-        <div class="choice-card__meta">
-          <span>${c.gift_name}</span>
-          <span class="delivery-tag">${c.delivery_method === 'pix' ? 'Pix' : 'No casamento'}</span>
-          <span>${c.created_at}</span>
+        <div class="admin-item-card__actions">
+          <button class="btn-edit"   onclick="openEditItem(${item.id})">Editar</button>
+          <button class="btn-delete" onclick="deleteItem(${item.id})">Remover</button>
         </div>
-        ${c.message ? `<p class="choice-card__message">"${c.message}"</p>` : ''}
-      </div>
-      <div class="choice-card__right">
-        <span class="choice-card__price">R$ ${fmt(c.pix_amount || c.gift_price)}</span>
-        <span class="status-badge status-badge--${c.status}">${c.status === 'confirmed' ? 'Confirmado' : 'Pendente'}</span>
-        ${c.status === 'pending' ? `<button class="confirm-btn" onclick="confirmChoice(${c.id})">Confirmar</button>` : ''}
       </div>
     </div>
   `).join('');
 }
 
-async function confirmChoice(id) {
-  await adminFetch(`/api/admin/choices/${id}/status`, {
+// ─── Contributions ────────────────────────────────────────────────────────────
+async function loadContributions() {
+  const res            = await api('/api/admin/contributions');
+  state.contributions  = await res.json();
+  if (!Array.isArray(state.contributions)) state.contributions = [];
+  renderContributions();
+}
+
+function renderContributions() {
+  const filter = document.getElementById('contribFilter')?.value || 'all';
+  const list   = filter === 'all'
+    ? state.contributions
+    : state.contributions.filter(c => c.status === filter);
+  renderContribCards(document.getElementById('allContribs'), list);
+}
+
+function renderContribCards(container, contribs) {
+  if (!container) return;
+  if (!contribs || !contribs.length) {
+    container.innerHTML = '<p style="color:var(--text-light);font-size:.85rem;padding:1rem 0">Nenhuma contribuição ainda.</p>';
+    return;
+  }
+  container.innerHTML = contribs.map(c => `
+    <div class="contrib-card">
+      <div class="contrib-card__info">
+        <p class="contrib-card__name">${c.giver_name}</p>
+        <div class="contrib-card__meta">
+          <span>${c.item_name}</span>
+          <span>${c.created_at}</span>
+        </div>
+        ${c.message ? `<p class="contrib-card__message">"${c.message}"</p>` : ''}
+      </div>
+      <div class="contrib-card__right">
+        <span class="contrib-card__amount">R$ ${fmt(c.amount)}</span>
+        <span class="status-badge status-badge--${c.status}">
+          ${c.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+        </span>
+        ${c.status === 'pending'
+          ? `<button class="confirm-btn" onclick="confirmContrib(${c.id})">Confirmar</button>`
+          : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function confirmContrib(id) {
+  await api(`/api/admin/contributions/${id}/status`, {
     method: 'PUT',
-    body: JSON.stringify({ status: 'confirmed' }),
+    body:   JSON.stringify({ status: 'confirmed' }),
   });
-  await loadChoices();
-  loadDashboard();
+  await loadContributions();
+  loadStats();
 }
 
-// ─── Gift Modal ───────────────────────────────────────────────────────────────
-function openAddGift() {
-  document.getElementById('giftModalTitle').textContent = 'Novo Presente';
-  document.getElementById('editGiftId').value    = '';
-  document.getElementById('giftName').value      = '';
-  document.getElementById('giftDescription').value = '';
-  document.getElementById('giftPrice').value     = '';
-  document.getElementById('giftMaxQty').value    = 1;
-  document.getElementById('giftCategory').value  = 'Geral';
-  document.getElementById('giftImageUrl').value  = '';
-  document.getElementById('giftIsMonetary').checked = false;
-  document.getElementById('giftIsActive').checked   = true;
-  document.getElementById('giftModal').classList.remove('hidden');
+// ─── Item Modal ───────────────────────────────────────────────────────────────
+let uploadedUrl = '';
+
+function resetUpload() {
+  uploadedUrl = '';
+  document.getElementById('itemImageUrl').value = '';
+  document.getElementById('uploadImg').classList.add('hidden');
+  document.getElementById('uploadImg').src = '';
+  document.getElementById('uploadPlaceholder').classList.remove('hidden');
+  document.getElementById('uploadStatus').textContent = '';
+  document.getElementById('uploadStatus').className   = 'upload-status';
+  document.getElementById('imageFile').value = '';
 }
 
-function openEditGift(id) {
-  const g = state.gifts.find(x => x.id === id);
-  if (!g) return;
-  document.getElementById('giftModalTitle').textContent  = 'Editar Presente';
-  document.getElementById('editGiftId').value    = g.id;
-  document.getElementById('giftName').value      = g.name;
-  document.getElementById('giftDescription').value = g.description || '';
-  document.getElementById('giftPrice').value     = g.price;
-  document.getElementById('giftMaxQty').value    = g.max_quantity;
-  document.getElementById('giftCategory').value  = g.category;
-  document.getElementById('giftImageUrl').value  = g.image_url || '';
-  document.getElementById('giftIsMonetary').checked = g.is_monetary;
-  document.getElementById('giftIsActive').checked   = g.is_active;
-  document.getElementById('giftModal').classList.remove('hidden');
+function openAddItem() {
+  document.getElementById('itemModalTitle').textContent = 'Nova Experiência';
+  document.getElementById('editItemId').value      = '';
+  document.getElementById('itemName').value        = '';
+  document.getElementById('itemDescription').value = '';
+  document.getElementById('itemGoal').value        = '';
+  document.getElementById('itemCategory').value    = 'Passeio';
+  document.getElementById('itemOrder').value       = 0;
+  document.getElementById('itemIsActive').checked  = true;
+  resetUpload();
+  document.getElementById('itemModal').classList.remove('hidden');
 }
 
-function closeGiftModal() {
-  document.getElementById('giftModal').classList.add('hidden');
+function openEditItem(id) {
+  const item = state.items.find(x => x.id === id);
+  if (!item) return;
+  document.getElementById('itemModalTitle').textContent = 'Editar Experiência';
+  document.getElementById('editItemId').value      = item.id;
+  document.getElementById('itemName').value        = item.name;
+  document.getElementById('itemDescription').value = item.description || '';
+  document.getElementById('itemGoal').value        = item.goal_amount;
+  document.getElementById('itemCategory').value    = item.category;
+  document.getElementById('itemOrder').value       = item.display_order;
+  document.getElementById('itemIsActive').checked  = item.is_active;
+
+  resetUpload();
+  if (item.image_url) {
+    uploadedUrl = item.image_url;
+    document.getElementById('itemImageUrl').value = item.image_url;
+    document.getElementById('uploadImg').src      = item.image_url;
+    document.getElementById('uploadImg').classList.remove('hidden');
+    document.getElementById('uploadPlaceholder').classList.add('hidden');
+    document.getElementById('uploadStatus').textContent = 'Foto atual';
+    document.getElementById('uploadStatus').className   = 'upload-status upload-status--ok';
+  }
+
+  document.getElementById('itemModal').classList.remove('hidden');
 }
 
-async function saveGift() {
-  const id = document.getElementById('editGiftId').value;
+function closeItemModal() {
+  document.getElementById('itemModal').classList.add('hidden');
+}
+
+// ─── File Upload ──────────────────────────────────────────────────────────────
+async function handleFileChange(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const status = document.getElementById('uploadStatus');
+  status.textContent = 'Enviando...';
+  status.className   = 'upload-status';
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const res  = await fetch('/api/admin/upload', {
+      method:  'POST',
+      headers: { 'X-Admin-Token': getToken() },
+      body:    formData,
+    });
+    const data = await res.json();
+
+    if (res.ok && data.url) {
+      uploadedUrl = data.url;
+      document.getElementById('itemImageUrl').value = data.url;
+      document.getElementById('uploadImg').src      = data.url;
+      document.getElementById('uploadImg').classList.remove('hidden');
+      document.getElementById('uploadPlaceholder').classList.add('hidden');
+      status.textContent = 'Foto enviada com sucesso';
+      status.className   = 'upload-status upload-status--ok';
+    } else {
+      status.textContent = data.error || 'Erro ao enviar';
+      status.className   = 'upload-status upload-status--error';
+    }
+  } catch {
+    status.textContent = 'Erro de conexão';
+    status.className   = 'upload-status upload-status--error';
+  }
+}
+
+async function saveItem() {
+  const id = document.getElementById('editItemId').value;
   const payload = {
-    name:         document.getElementById('giftName').value.trim(),
-    description:  document.getElementById('giftDescription').value.trim(),
-    price:        parseFloat(document.getElementById('giftPrice').value),
-    max_quantity: parseInt(document.getElementById('giftMaxQty').value),
-    category:     document.getElementById('giftCategory').value,
-    image_url:    document.getElementById('giftImageUrl').value.trim(),
-    is_monetary:  document.getElementById('giftIsMonetary').checked,
-    is_active:    document.getElementById('giftIsActive').checked,
+    name:          document.getElementById('itemName').value.trim(),
+    description:   document.getElementById('itemDescription').value.trim(),
+    goal_amount:   parseFloat(document.getElementById('itemGoal').value),
+    image_url:     uploadedUrl || document.getElementById('itemImageUrl').value.trim(),
+    category:      document.getElementById('itemCategory').value,
+    display_order: parseInt(document.getElementById('itemOrder').value) || 0,
+    is_active:     document.getElementById('itemIsActive').checked,
   };
 
-  if (!payload.name || isNaN(payload.price)) {
-    alert('Preencha nome e valor.');
+  if (!payload.name || isNaN(payload.goal_amount) || payload.goal_amount < 1) {
+    alert('Preencha nome e meta.');
     return;
   }
 
-  const saveBtn = document.getElementById('giftModalSave');
-  saveBtn.textContent = 'Salvando...';
-  saveBtn.disabled = true;
+  const btn = document.getElementById('itemModalSave');
+  btn.textContent = 'Salvando...';
+  btn.disabled    = true;
 
   try {
-    const url    = id ? `/api/admin/gifts/${id}` : '/api/admin/gifts';
+    const url    = id ? `/api/admin/items/${id}` : '/api/admin/items';
     const method = id ? 'PUT' : 'POST';
-    const res    = await adminFetch(url, { method, body: JSON.stringify(payload) });
+    const res    = await api(url, { method, body: JSON.stringify(payload) });
 
     if (res.ok) {
-      closeGiftModal();
-      await loadGifts();
+      closeItemModal();
+      await loadItems();
+      loadStats();
     } else {
       const err = await res.json();
       alert(err.error || 'Erro ao salvar.');
     }
-  } catch (e) {
+  } catch {
     alert('Erro de conexão.');
   } finally {
-    saveBtn.textContent = 'Salvar';
-    saveBtn.disabled = false;
+    btn.textContent = 'Salvar experiência';
+    btn.disabled    = false;
   }
 }
 
-async function deleteGift(id) {
-  if (!confirm('Remover este item do catálogo?')) return;
-  await adminFetch(`/api/admin/gifts/${id}`, { method: 'DELETE' });
-  await loadGifts();
+async function deleteItem(id) {
+  if (!confirm('Remover esta experiência?')) return;
+  await api(`/api/admin/items/${id}`, { method: 'DELETE' });
+  await loadItems();
+  loadStats();
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -318,5 +392,5 @@ function fmt(n) {
   return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 }
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// ─── Boot ─────────────────────────────────────────────────────────────────────
 init();

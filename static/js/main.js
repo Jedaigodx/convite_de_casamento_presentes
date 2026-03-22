@@ -1,210 +1,209 @@
 // ─── State ────────────────────────────────────────────────────────────────────
 const state = {
-  gifts: [],
-  selectedGift: null,
-  selectedMethod: null,
-  currentStep: 1,
-  currentFilter: 'all',
+  items: [],
+  selected: null,
+  amount: 0,
 };
 
 // ─── DOM ──────────────────────────────────────────────────────────────────────
-const catalogGrid = document.getElementById('catalogGrid');
+const catalogGrid    = document.getElementById('catalogGrid');
 const catalogLoading = document.getElementById('catalogLoading');
-const catalogEmpty = document.getElementById('catalogEmpty');
-const filterBar = document.getElementById('filterBar');
-
-const chooseModal = document.getElementById('chooseModal');
-const chooseModalClose = document.getElementById('chooseModalClose');
+const catalogEmpty   = document.getElementById('catalogEmpty');
+const modal          = document.getElementById('modal');
+const modalClose     = document.getElementById('modalClose');
 
 const step1 = document.getElementById('step1');
 const step2 = document.getElementById('step2');
 const step3 = document.getElementById('step3');
 
-const modalItemName = document.getElementById('modalItemName');
-const modalItemPrice = document.getElementById('modalItemPrice');
-const modalItemDesc = document.getElementById('modalItemDesc');
-const monetaryAmountGroup = document.getElementById('monetaryAmountGroup');
-const monetaryAmount = document.getElementById('monetaryAmount');
-
-const deliveryBtns = document.querySelectorAll('.delivery-btn');
-const step1Next = document.getElementById('step1Next');
-const step2Back = document.getElementById('step2Back');
-const step2Confirm = document.getElementById('step2Confirm');
-const step3Close = document.getElementById('step3Close');
-const chooseModalCloseBtn = document.getElementById('chooseModalClose');
-
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
-  await loadGifts();
+  await loadItems();
   bindEvents();
 }
 
-// ─── Load Gifts ───────────────────────────────────────────────────────────────
-async function loadGifts() {
+// ─── Load ─────────────────────────────────────────────────────────────────────
+async function loadItems() {
   try {
-    const res = await fetch('/api/gifts');
-    state.gifts = await res.json();
-    renderGifts();
-  } catch (e) {
-    catalogLoading.innerHTML = '<p style="color:var(--text-light)">Erro ao carregar presentes. Tente novamente.</p>';
+    const res   = await fetch('/api/items');
+    state.items = await res.json();
+    renderAll();
+  } catch {
+    catalogLoading.innerHTML = '<p style="color:var(--text-light)">Erro ao carregar. Tente novamente.</p>';
   }
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────────
-function renderGifts() {
+function renderAll() {
   catalogLoading.classList.add('hidden');
-  const filtered = state.currentFilter === 'all'
-    ? state.gifts
-    : state.gifts.filter(g => g.category === state.currentFilter);
+  updateBanner();
 
-  if (filtered.length === 0) {
+  if (!state.items.length) {
     catalogEmpty.classList.remove('hidden');
-    catalogGrid.innerHTML = '';
     return;
   }
-  catalogEmpty.classList.add('hidden');
 
-  catalogGrid.innerHTML = filtered.map((gift, i) => buildCard(gift, i)).join('');
-
-  catalogGrid.querySelectorAll('.gift-card:not(.gift-card--unavailable)').forEach(card => {
+  catalogGrid.innerHTML = state.items.map((item, i) => buildCard(item, i)).join('');
+  catalogGrid.querySelectorAll('.travel-card:not(.travel-card--complete)').forEach(card => {
     card.addEventListener('click', () => openModal(+card.dataset.id));
   });
 }
 
-function buildCard(gift, index) {
-  const available = gift.is_monetary || gift.is_available;
-  const priceLabel = gift.is_monetary
-    ? `A partir de R$ ${fmt(gift.price)}`
-    : `R$ ${fmt(gift.price)}`;
+function updateBanner() {
+  const totalGoal   = state.items.reduce((s, i) => s + i.goal_amount, 0);
+  const totalRaised = state.items.reduce((s, i) => s + i.raised_amount, 0);
+  const pct         = totalGoal > 0 ? Math.min(100, (totalRaised / totalGoal * 100).toFixed(1)) : 0;
 
-  const qtyLabel = gift.is_monetary
-    ? ''
-    : gift.max_quantity === 1
-      ? (available ? 'Disponível' : 'Já escolhido')
-      : `${gift.available_quantity} de ${gift.max_quantity} disponíveis`;
+  document.getElementById('bannerValues').textContent =
+    `R$ ${fmt(totalRaised)} de R$ ${fmt(totalGoal)}`;
+  document.getElementById('bannerFill').style.width  = pct + '%';
+  document.getElementById('bannerPct').textContent   = pct + '%';
+}
 
-  const img = gift.image_url
-    ? `<img class="gift-card__image" src="${gift.image_url}" alt="${gift.name}" loading="lazy" />`
-    : `<div class="gift-card__image-placeholder">♡</div>`;
+function buildCard(item, index) {
+  const pct = item.progress_pct;
+  const img = item.image_url
+    ? `<img class="travel-card__img" src="${item.image_url}" alt="${item.name}" loading="lazy" />`
+    : `<div class="travel-card__img-placeholder">✈</div>`;
 
-  const btn = available
-    ? `<button class="gift-card__choose-btn">Escolher</button>`
-    : `<span class="gift-card__unavailable-tag">Esgotado</span>`;
+  const completeBadge = item.is_complete
+    ? `<span class="travel-card__complete-badge">Meta atingida</span>` : '';
+  const btn = item.is_complete
+    ? `<button class="travel-card__btn travel-card__btn--complete" disabled>Meta atingida</button>`
+    : `<button class="travel-card__btn">Contribuir</button>`;
 
   return `
-    <div class="gift-card ${available ? '' : 'gift-card--unavailable'} ${gift.is_monetary ? 'gift-card--monetary' : ''}"
-         data-id="${gift.id}"
-         style="animation-delay:${index * 0.05}s">
-      ${img}
-      <div class="gift-card__body">
-        <p class="gift-card__category">${gift.category}</p>
-        <h3 class="gift-card__name">${gift.name}</h3>
-        <p class="gift-card__desc">${gift.description || ''}</p>
-        <div class="gift-card__footer">
-          <span class="gift-card__price">${priceLabel}</span>
-          ${qtyLabel ? `<span class="gift-card__qty">${qtyLabel}</span>` : ''}
+    <div class="travel-card ${item.is_complete ? 'travel-card--complete' : ''}"
+         data-id="${item.id}" style="animation-delay:${index * 0.07}s">
+      <div class="travel-card__img-wrap">
+        ${img}
+        <span class="travel-card__category-badge">${item.category}</span>
+        ${completeBadge}
+      </div>
+      <div class="travel-card__body">
+        <h3 class="travel-card__name">${item.name}</h3>
+        <p class="travel-card__desc">${item.description || ''}</p>
+        <div class="card-progress">
+          <div class="card-progress__header">
+            <span class="card-progress__raised">R$ ${fmt(item.raised_amount)}</span>
+            <span class="card-progress__goal">meta R$ ${fmt(item.goal_amount)}</span>
+          </div>
+          <div class="card-progress__track">
+            <div class="card-progress__fill" style="width:${pct}%"></div>
+          </div>
+          <p class="card-progress__pct">${pct}% arrecadado</p>
         </div>
-        <div style="margin-top:0.8rem;display:flex;justify-content:flex-end">${btn}</div>
+        ${btn}
       </div>
     </div>`;
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 function openModal(id) {
-  const gift = state.gifts.find(g => g.id === id);
-  if (!gift) return;
-  state.selectedGift = gift;
-  state.selectedMethod = null;
-  state.currentStep = 1;
+  const item = state.items.find(i => i.id === id);
+  if (!item) return;
+  state.selected = item;
+  state.amount   = 0;
 
-  modalItemName.textContent = gift.name;
-  modalItemPrice.textContent = gift.is_monetary
-    ? `Contribuição a partir de R$ ${fmt(gift.price)}`
-    : `R$ ${fmt(gift.price)}`;
-  modalItemDesc.textContent = gift.description || '';
+  // Step 1 setup
+  document.getElementById('s1Name').textContent = item.name;
 
-  if (gift.is_monetary) {
-    monetaryAmountGroup.classList.remove('hidden');
-    monetaryAmount.value = gift.price;
-  } else {
-    monetaryAmountGroup.classList.add('hidden');
-  }
+  const fill = document.getElementById('s1Fill');
+  fill.style.width = item.progress_pct + '%';
+  document.getElementById('s1ProgressText').textContent =
+    `R$ ${fmt(item.raised_amount)} arrecadado de R$ ${fmt(item.goal_amount)} (${item.progress_pct}%)`;
 
-  deliveryBtns.forEach(b => b.classList.remove('selected'));
-  step1Next.disabled = true;
+  // Suggestion chips based on goal
+  buildChips(item.goal_amount);
+
+  // Reset
+  document.getElementById('amountInput').value = '';
+  document.getElementById('step1Next').disabled = true;
+  document.querySelectorAll('.amount-chip').forEach(c => c.classList.remove('selected'));
 
   showStep(1);
-  chooseModal.classList.remove('hidden');
+  modal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
 
+function buildChips(goal) {
+  const suggestions = getSuggestions(goal);
+  const wrap = document.getElementById('amountSuggestions');
+  wrap.innerHTML = suggestions.map(v =>
+    `<button class="amount-chip" data-value="${v}">R$ ${fmt(v)}</button>`
+  ).join('');
+  wrap.querySelectorAll('.amount-chip').forEach(btn => {
+    btn.addEventListener('click', () => selectChip(btn, +btn.dataset.value));
+  });
+}
+
+function getSuggestions(goal) {
+  if (goal <= 100)  return [10, 20, 50, goal];
+  if (goal <= 300)  return [20, 50, 100, goal];
+  if (goal <= 600)  return [50, 100, 200, goal];
+  if (goal <= 1000) return [50, 100, 250, goal];
+  return [100, 200, 500, goal];
+}
+
+function selectChip(btn, value) {
+  document.querySelectorAll('.amount-chip').forEach(c => c.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('amountInput').value = '';
+  state.amount = value;
+  document.getElementById('step1Next').disabled = false;
+}
+
 function closeModal() {
-  chooseModal.classList.add('hidden');
+  modal.classList.add('hidden');
   document.body.style.overflow = '';
 }
 
 function showStep(n) {
   [step1, step2, step3].forEach(s => s.classList.add('hidden'));
-  if (n === 1) step1.classList.remove('hidden');
-  if (n === 2) step2.classList.remove('hidden');
-  if (n === 3) step3.classList.remove('hidden');
-  state.currentStep = n;
+  [step1, step2, step3][n - 1].classList.remove('hidden');
 }
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 function bindEvents() {
-  // Filter
-  filterBar.addEventListener('click', e => {
-    const btn = e.target.closest('.filter-btn');
-    if (!btn) return;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.currentFilter = btn.dataset.cat;
-    renderGifts();
+  modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+  document.getElementById('step3Close').addEventListener('click', closeModal);
+
+  // Amount input
+  document.getElementById('amountInput').addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    document.querySelectorAll('.amount-chip').forEach(c => c.classList.remove('selected'));
+    if (v >= 1) {
+      state.amount = v;
+      document.getElementById('step1Next').disabled = false;
+    } else {
+      state.amount = 0;
+      document.getElementById('step1Next').disabled = true;
+    }
   });
 
-  // Close modal
-  chooseModalClose.addEventListener('click', closeModal);
-  chooseModal.addEventListener('click', e => {
-    if (e.target === chooseModal) closeModal();
-  });
-  step3Close.addEventListener('click', closeModal);
-
-  // Delivery selection
-  deliveryBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      deliveryBtns.forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      btn.querySelector('.delivery-icon').textContent = '';
-      state.selectedMethod = btn.dataset.method;
-      step1Next.disabled = false;
-    });
-  });
-
-  // Step navigation
-  step1Next.addEventListener('click', () => {
-    document.getElementById('giverName').value = '';
+  document.getElementById('step1Next').addEventListener('click', () => {
+    document.getElementById('giverName').value    = '';
     document.getElementById('giverMessage').value = '';
+    document.getElementById('giverName').style.borderColor = '';
     showStep(2);
   });
 
-  step2Back.addEventListener('click', () => showStep(1));
-
-  step2Confirm.addEventListener('click', confirmGift);
+  document.getElementById('step2Back').addEventListener('click', () => showStep(1));
+  document.getElementById('step2Confirm').addEventListener('click', confirm);
 
   document.getElementById('copyPixKey').addEventListener('click', () => {
-    const key = document.getElementById('pixKey').textContent;
+    const key = document.getElementById('s3PixKey').textContent;
     navigator.clipboard.writeText(key).catch(() => {});
-    document.getElementById('copyPixKey').textContent = 'Copiado!';
-    setTimeout(() => {
-      document.getElementById('copyPixKey').textContent = 'Copiar chave Pix';
-    }, 2000);
+    const btn = document.getElementById('copyPixKey');
+    btn.textContent = 'Copiado!';
+    setTimeout(() => { btn.textContent = 'Copiar chave Pix'; }, 2000);
   });
 }
 
 // ─── Confirm ──────────────────────────────────────────────────────────────────
-async function confirmGift() {
-  const name = document.getElementById('giverName').value.trim();
+async function confirm() {
+  const name    = document.getElementById('giverName').value.trim();
   const message = document.getElementById('giverMessage').value.trim();
 
   if (!name) {
@@ -214,77 +213,63 @@ async function confirmGift() {
   }
   document.getElementById('giverName').style.borderColor = '';
 
-  const amount = state.selectedGift.is_monetary
-    ? parseFloat(monetaryAmount.value) || state.selectedGift.price
-    : state.selectedGift.price;
-
-  step2Confirm.disabled = true;
-  step2Confirm.textContent = 'Confirmando...';
+  const btn = document.getElementById('step2Confirm');
+  btn.disabled    = true;
+  btn.textContent = 'Confirmando...';
 
   try {
-    const res = await fetch('/api/choose', {
-      method: 'POST',
+    const res  = await fetch('/api/contribute', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        gift_item_id: state.selectedGift.id,
-        giver_name: name,
+      body:    JSON.stringify({
+        travel_item_id: state.selected.id,
+        giver_name:     name,
         message,
-        delivery_method: state.selectedMethod,
-        pix_amount: amount,
+        amount:         state.amount,
       }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erro');
 
-    // Refresh catalog
-    await loadGifts();
+    // Reload items in background to update progress bars
+    loadItems();
 
-    // Show confirmation
-    if (state.selectedMethod === 'wedding') {
-      document.getElementById('step3Wedding').classList.remove('hidden');
-      document.getElementById('step3Pix').classList.add('hidden');
-      document.getElementById('confirmedName').textContent = name;
-      const msgEl = document.getElementById('confirmedMessage');
-      if (message) {
-        msgEl.textContent = `"${message}"`;
-        msgEl.classList.remove('hidden');
-      } else {
-        msgEl.classList.add('hidden');
-      }
+    // Step 3
+    document.getElementById('s3Name').textContent    = name;
+    document.getElementById('s3Amount').textContent  = `R$ ${fmt(state.amount)}`;
+    document.getElementById('s3PixName').textContent = data.pix_name;
+    document.getElementById('s3PixKey').textContent  = data.pix_key;
+
+    if (message) {
+      document.getElementById('s3Message').textContent = `"${message}"`;
+      document.getElementById('s3MessageWrap').classList.remove('hidden');
     } else {
-      document.getElementById('step3Wedding').classList.add('hidden');
-      document.getElementById('step3Pix').classList.remove('hidden');
-      document.getElementById('confirmedNamePix').textContent = name;
-      document.getElementById('pixAmount').textContent = `R$ ${fmt(amount)}`;
-      document.getElementById('pixName').textContent = data.pix_name;
-      document.getElementById('pixKey').textContent = data.pix_key;
-
-      // Generate QR
-      generateQR(amount, name);
+      document.getElementById('s3MessageWrap').classList.add('hidden');
     }
 
+    generateQR(state.amount);
     showStep(3);
   } catch (e) {
     alert(e.message || 'Ocorreu um erro. Tente novamente.');
   } finally {
-    step2Confirm.disabled = false;
-    step2Confirm.textContent = 'Confirmar presente';
+    btn.disabled    = false;
+    btn.textContent = 'Confirmar';
   }
 }
 
-async function generateQR(amount, name) {
-  const qrEl = document.getElementById('pixQrCode');
+async function generateQR(amount) {
+  const qrEl = document.getElementById('pixQr');
   qrEl.innerHTML = '<div class="spinner"></div>';
   try {
-    const res = await fetch('/api/pix-qrcode', {
-      method: 'POST',
+    const res  = await fetch('/api/pix-qrcode', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount, giver_name: name }),
+      body:    JSON.stringify({ amount }),
     });
     const data = await res.json();
     qrEl.innerHTML = `<img src="${data.qrcode}" alt="QR Code Pix" />`;
   } catch {
-    qrEl.innerHTML = '<p style="font-size:0.75rem;color:var(--text-light);text-align:center">QR indisponível</p>';
+    qrEl.innerHTML = '<p style="font-size:.75rem;color:var(--text-light);text-align:center">QR indisponível</p>';
   }
 }
 
@@ -293,5 +278,5 @@ function fmt(n) {
   return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 }
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// ─── Boot ─────────────────────────────────────────────────────────────────────
 init();
