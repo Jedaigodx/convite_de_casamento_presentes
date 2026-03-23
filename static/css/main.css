@@ -104,14 +104,22 @@ input,textarea,select{font-family:var(--font-body)}
 
 /* ── Lightbox ── */
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2000;display:flex;align-items:center;justify-content:center}
-.lightbox__close{position:absolute;top:1rem;right:1.2rem;color:white;font-size:2rem;line-height:1;opacity:.7;transition:opacity .2s}
+.lightbox__close{position:absolute;top:1rem;right:1.2rem;color:white;font-size:2rem;line-height:1;opacity:.7;transition:opacity .2s;z-index:10}
 .lightbox__close:hover{opacity:1}
-.lightbox__img{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:var(--radius)}
-.lightbox__nav{position:absolute;top:50%;transform:translateY(-50%);color:white;font-size:3rem;line-height:1;opacity:.5;transition:opacity .2s;padding:0 1rem}
+.lightbox__img{max-width:90vw;max-height:80vh;object-fit:contain;border-radius:var(--radius);transition:opacity .12s ease;display:block}
+.lightbox__nav{position:absolute;top:50%;transform:translateY(-50%);color:white;font-size:3.5rem;line-height:1;opacity:.45;transition:opacity .2s;padding:.5rem 1.2rem;background:transparent;z-index:10;-webkit-tap-highlight-color:transparent}
 .lightbox__nav:hover{opacity:1}
-.lightbox__nav--prev{left:.5rem}
-.lightbox__nav--next{right:.5rem}
-.lightbox__counter{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.6);font-size:.75rem;letter-spacing:.1em}
+.lightbox__nav--prev{left:0}
+.lightbox__nav--next{right:0}
+.lightbox__bottom{position:absolute;bottom:1.2rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:.5rem}
+.lightbox__counter{color:rgba(255,255,255,.55);font-size:.72rem;letter-spacing:.1em;white-space:nowrap}
+.lightbox__dots{display:flex;gap:.4rem;justify-content:center}
+.lb-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35);cursor:pointer;transition:background .2s,transform .2s}
+.lb-dot:hover{background:rgba(255,255,255,.7)}
+.lb-dot--active{background:white;transform:scale(1.25)}
+/* Active thumbnail highlight */
+.featured-card__thumb--active{border:2px solid white;opacity:1}
+.featured-card__img-count{position:absolute;top:.7rem;right:.7rem;background:rgba(0,0,0,.45);color:white;font-size:.62rem;letter-spacing:.06em;padding:.2rem .5rem;border-radius:3px;backdrop-filter:blur(2px)}
 
 /* ── Modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(44,42,37,.55);backdrop-filter:blur(3px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;animation:fadeIn .2s ease}
