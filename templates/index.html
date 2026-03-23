@@ -21,28 +21,16 @@
       <h2 class="header-title">Thatianna <em>&</em> Vinicius</h2>
       <p class="header-subtitle">Lua de Mel & Experiências</p>
       <div class="header-divider"></div>
-      <p class="header-note">
-        Nosso maior sonho é viver momentos inesquecíveis juntos.<br>
-        Se quiser nos presentear, escolha uma experiência e contribua com o valor que puder.
-      </p>
+      <div class="header-note">
+        <p><span class="drop-cap">C</span>om muito amor, estamos realizando o sonho do nosso
+        casamento e já temos nosso lar montado com tudo o que precisamos.</p>
+        <p>Por isso, se desejarem nos presentear, ficaremos muito felizes com uma contribuição
+        para a nossa viagem de lua de mel.</p>
+        <p>Qualquer valor será recebido com carinho e fará parte de momentos inesquecíveis
+        da nossa nova história.</p>
+      </div>
     </div>
   </header>
-
-  <!-- ── Progress Banner ── -->
-  <div class="trip-banner" id="tripBanner">
-    <div class="trip-banner__inner">
-      <div class="trip-banner__text">
-        <span class="trip-banner__label">Progresso geral da viagem</span>
-        <span class="trip-banner__values" id="bannerValues">carregando...</span>
-      </div>
-      <div class="trip-banner__bar-wrap">
-        <div class="trip-banner__bar">
-          <div class="trip-banner__fill" id="bannerFill" style="width:0%"></div>
-        </div>
-        <span class="trip-banner__pct" id="bannerPct">0%</span>
-      </div>
-    </div>
-  </div>
 
   <!-- ── Catalog ── -->
   <main class="site-main">
@@ -50,7 +38,9 @@
       <div class="spinner"></div>
       <p>Carregando experiências...</p>
     </div>
-    <div class="catalog-grid" id="catalogGrid"></div>
+
+    <div id="catalogRoot"></div>
+
     <div class="catalog-empty hidden" id="catalogEmpty">
       <p>Nenhuma experiência disponível no momento.</p>
     </div>
@@ -63,14 +53,14 @@
   </footer>
 
   <!-- ══ Modal ══ -->
-  <div class="modal-overlay hidden" id="modal">
-    <div class="modal" role="dialog" aria-modal="true">
-      <button class="modal-close" id="modalClose">&times;</button>
+  <div class="modal-overlay hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <button class="modal-close" id="modalClose" aria-label="Fechar">&times;</button>
 
       <!-- Step 1: Amount -->
       <div class="modal-step" id="step1">
         <p class="modal-eyebrow">Contribuir para</p>
-        <h3 class="modal-item-name" id="s1Name"></h3>
+        <h3 class="modal-item-name" id="s1Name" id="modalTitle"></h3>
 
         <div class="modal-progress-mini">
           <div class="modal-progress-mini__bar">
@@ -80,13 +70,12 @@
         </div>
 
         <p class="modal-question">Quanto você gostaria de contribuir?</p>
-
         <div class="amount-suggestions" id="amountSuggestions"></div>
 
         <div class="amount-custom">
           <span class="amount-prefix">R$</span>
           <input class="amount-input" type="number" id="amountInput"
-                 min="1" step="1" placeholder="outro valor" />
+                 min="1" max="50000" step="1" placeholder="outro valor" autocomplete="off" />
         </div>
 
         <button class="btn-primary btn-block" id="step1Next" disabled>Continuar</button>
@@ -98,13 +87,13 @@
         <h3 class="modal-section-title">Seus dados</h3>
 
         <div class="form-group">
-          <label class="form-label">Seu nome <span class="required">*</span></label>
-          <input class="form-input" type="text" id="giverName"
-                 placeholder="Como você gostaria de ser chamado" />
+          <label class="form-label" for="giverName">Seu nome <span class="required">*</span></label>
+          <input class="form-input" type="text" id="giverName" maxlength="200"
+                 placeholder="Como você gostaria de ser chamado" autocomplete="name" />
         </div>
         <div class="form-group">
-          <label class="form-label">Mensagem para os noivos <span class="optional">(opcional)</span></label>
-          <textarea class="form-textarea" id="giverMessage" rows="3"
+          <label class="form-label" for="giverMessage">Mensagem para os noivos <span class="optional">(opcional)</span></label>
+          <textarea class="form-textarea" id="giverMessage" rows="3" maxlength="500"
                     placeholder="Escreva algo especial para Thatianna e Vinicius..."></textarea>
         </div>
 
@@ -119,7 +108,7 @@
         <div class="confirmation-icon">✓</div>
         <h3 class="modal-section-title">Presente confirmado!</h3>
         <p class="confirmation-text">
-          Obrigada, <strong id="s3Name"></strong>!<br>
+          Obrigado, <strong id="s3Name"></strong>!<br>
           Use o QR Code abaixo para concluir sua contribuição via Pix.
         </p>
 
@@ -151,7 +140,6 @@
 
         <button class="btn-secondary btn-block" id="step3Close" style="margin-top:1.2rem">Fechar</button>
       </div>
-
     </div>
   </div>
 

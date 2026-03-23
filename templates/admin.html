@@ -19,7 +19,7 @@
       <p class="login-subtitle">Acesso restrito</p>
       <div class="form-group">
         <label class="form-label">Senha</label>
-        <input class="form-input" type="password" id="adminPassword" placeholder="••••••••" />
+        <input class="form-input" type="password" id="adminPassword" placeholder="" />
       </div>
       <p class="login-error hidden" id="loginError">Senha incorreta.</p>
       <button class="btn-primary btn-block" id="loginBtn">Entrar</button>
@@ -144,7 +144,7 @@
         <div class="item-modal-fields">
           <div class="form-group">
             <label class="form-label">Nome da experiência <span class="required">*</span></label>
-            <input class="form-input" type="text" id="itemName" placeholder="Ex: Bondinho do Pão de Açúcar" />
+            <input class="form-input" type="text" id="itemName" placeholder="" />
           </div>
           <div class="form-group">
             <label class="form-label">Descrição</label>
@@ -168,6 +168,15 @@
                 <option>Viagem</option>
               </select>
             </div>
+          </div>
+          <div class="form-group">
+              <label class="form-label">Tipo de item</label>
+              <select class="form-input" id="itemParentId">
+                <option value="">Destino principal (raiz)</option>
+              </select>
+              <p style="font-size:.68rem;color:var(--text-light);margin-top:.3rem">
+                Selecione um destino principal se este for um passeio/experiência dentro de uma viagem.
+              </p>
           </div>
           <div class="form-row">
             <div class="form-group">

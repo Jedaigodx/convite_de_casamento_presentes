@@ -266,6 +266,7 @@ function openAddItem() {
   document.getElementById('itemCategory').value    = 'Passeio';
   document.getElementById('itemOrder').value       = 0;
   document.getElementById('itemIsActive').checked  = true;
+  populateParentSelect(null);
   resetUpload();
   document.getElementById('itemModal').classList.remove('hidden');
 }
@@ -281,6 +282,7 @@ function openEditItem(id) {
   document.getElementById('itemCategory').value    = item.category;
   document.getElementById('itemOrder').value       = item.display_order;
   document.getElementById('itemIsActive').checked  = item.is_active;
+  populateParentSelect(item.parent_id || null);
 
   resetUpload();
   if (item.image_url) {
@@ -346,6 +348,7 @@ async function saveItem() {
     goal_amount:   parseFloat(document.getElementById('itemGoal').value),
     image_url:     uploadedUrl || document.getElementById('itemImageUrl').value.trim(),
     category:      document.getElementById('itemCategory').value,
+    parent_id:     getSelectedParentId(),
     display_order: parseInt(document.getElementById('itemOrder').value) || 0,
     is_active:     document.getElementById('itemIsActive').checked,
   };
@@ -390,6 +393,26 @@ async function deleteItem(id) {
 // ─── Utils ────────────────────────────────────────────────────────────────────
 function fmt(n) {
   return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+// ─── Parent select helpers ────────────────────────────────────────────────────
+function populateParentSelect(currentParentId) {
+  const sel = document.getElementById('itemParentId');
+  sel.innerHTML = '<option value="">Destino principal (raiz)</option>';
+  // Only root items can be parents
+  const roots = state.items.filter(i => !i.parent_id);
+  roots.forEach(root => {
+    const opt = document.createElement('option');
+    opt.value       = root.id;
+    opt.textContent = root.name;
+    if (currentParentId && root.id === currentParentId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function getSelectedParentId() {
+  const val = document.getElementById('itemParentId').value;
+  return val ? parseInt(val) : null;
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
