@@ -1,241 +1,221 @@
-// ─── State ────────────────────────────────────────────────────────────────────
-const state = { items: [], selected: null, amount: 0 };
+// ── State ──────────────────────────────────────────────────────────────────────
+const S = { items:[], selected:null, amount:0 };
 
-// ─── Safe text helpers (no XSS) ──────────────────────────────────────────────
-function setText(el, text) {
-  el.textContent = text;
-}
-function setHTML(el, html) {
-  // Only used for structure we build ourselves — never for user-supplied strings
-  el.innerHTML = html;
-}
-// Safely set user-supplied text content into an element
-function safeNode(tag, text, cls) {
-  const el = document.createElement(tag);
-  if (cls) el.className = cls;
-  el.textContent = text;
-  return el;
+// Lightbox state
+const LB = { imgs:[], idx:0 };
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const tx = (el, t) => { el.textContent = t; };
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls)  e.className   = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────────────────────────
 async function init() {
-  await loadItems();
-  bindEvents();
+  await load();
+  bindModal();
+  bindLightbox();
 }
 
-async function loadItems() {
+async function load() {
   try {
-    const res   = await fetch('/api/items');
-    if (!res.ok) throw new Error('network');
-    state.items = await res.json();
-    if (!Array.isArray(state.items)) state.items = [];
+    const r = await fetch('/api/items');
+    if (!r.ok) throw new Error();
+    S.items = await r.json();
+    if (!Array.isArray(S.items)) S.items = [];
     render();
   } catch {
-    document.getElementById('catalogLoading').innerHTML =
-      '<p style="color:var(--text-light)">Erro ao carregar. Recarregue a página.</p>';
+    $('catalogLoading').innerHTML = '<p style="color:var(--text-light)">Erro ao carregar. Recarregue a página.</p>';
   }
 }
 
-// ─── Render ───────────────────────────────────────────────────────────────────
+// ── Render ─────────────────────────────────────────────────────────────────────
 function render() {
-  const loading = document.getElementById('catalogLoading');
-  const root    = document.getElementById('catalogRoot');
-  const empty   = document.getElementById('catalogEmpty');
-
-  loading.classList.add('hidden');
+  $('catalogLoading').classList.add('hidden');
+  const root = $('catalogRoot');
   root.innerHTML = '';
 
-  if (!state.items.length) {
-    empty.classList.remove('hidden');
-    return;
-  }
+  if (!S.items.length) { $('catalogEmpty').classList.remove('hidden'); return; }
 
-  state.items.forEach((item, idx) => {
-    if (idx > 0) root.appendChild(document.createElement('hr')).className = 'catalog-separator';
-    root.appendChild(buildRootSection(item, idx));
+  S.items.forEach((item, i) => {
+    if (i > 0) { const hr = document.createElement('hr'); hr.className = 'catalog-separator'; root.appendChild(hr); }
+    root.appendChild(mkFeatured(item, i));
   });
 }
 
-// ─── Featured root card ───────────────────────────────────────────────────────
-function buildRootSection(item, idx) {
-  const section = document.createElement('section');
-  section.className = 'featured-section';
-
-  // Card
-  const card = document.createElement('div');
-  card.className = `featured-card${item.is_complete ? ' featured-card--complete' : ''}`;
-  card.style.animationDelay = `${idx * 0.1}s`;
+// ── Featured card ──────────────────────────────────────────────────────────────
+function mkFeatured(item, idx) {
+  const sec  = el('section', 'featured-section');
+  const card = el('div', `featured-card${item.is_complete ? ' featured-card--complete' : ''}`);
+  card.style.animationDelay = `${idx * .1}s`;
   if (!item.is_complete) {
     card.addEventListener('click', () => openModal(item.id));
-    card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
+    card.setAttribute('role', 'button');
+    card.addEventListener('keydown', e => { if (e.key === 'Enter') openModal(item.id); });
   }
 
-  // Image side
-  const imgWrap = document.createElement('div');
-  imgWrap.className = 'featured-card__img-wrap';
-  if (item.image_url) {
+  // — Image side —
+  const imgWrap = el('div', 'featured-card__img-wrap');
+  const imgs = item.images || [];
+  if (imgs.length) {
     const img = document.createElement('img');
     img.className = 'featured-card__img';
-    img.src       = item.image_url;
-    img.alt       = item.name;
-    img.loading   = 'lazy';
+    img.src = imgs[0]; img.alt = item.name; img.loading = 'lazy';
     imgWrap.appendChild(img);
+
+    if (imgs.length > 1) {
+      const strip = el('div', 'featured-card__gallery');
+      imgs.slice(1, 5).forEach((url, ti) => {
+        const th = document.createElement('img');
+        th.className = 'featured-card__thumb';
+        th.src = url; th.alt = ''; th.loading = 'lazy';
+        th.addEventListener('click', e => {
+          e.stopPropagation();
+          openLightbox(imgs, ti + 1);
+        });
+        strip.appendChild(th);
+      });
+      imgWrap.appendChild(strip);
+    }
   } else {
-    const ph = document.createElement('div');
-    ph.className = 'featured-card__img-placeholder';
-    ph.textContent = '✈';
-    imgWrap.appendChild(ph);
+    imgWrap.appendChild(el('div', 'featured-card__img-placeholder', '✈'));
   }
-  const badge = safeNode('span', 'Destino Principal', 'featured-card__badge');
-  imgWrap.appendChild(badge);
+  imgWrap.appendChild(el('span', 'featured-card__badge', 'Destino Principal'));
   card.appendChild(imgWrap);
 
-  // Body side
-  const body = document.createElement('div');
-  body.className = 'featured-card__body';
-
-  body.appendChild(safeNode('p', item.category, 'featured-card__eyebrow'));
-  body.appendChild(safeNode('h3', item.name, 'featured-card__name'));
-  if (item.description) body.appendChild(safeNode('p', item.description, 'featured-card__desc'));
+  // — Body —
+  const body = el('div', 'featured-card__body');
+  body.appendChild(el('p', 'featured-card__eyebrow', item.category));
+  body.appendChild(el('h3', 'featured-card__name', item.name));
+  if (item.description) body.appendChild(el('p', 'featured-card__desc', item.description));
 
   // Progress
-  const prog = buildFeaturedProgress(item);
+  const prog = el('div', 'featured-progress');
+  const hdr  = el('div', 'featured-progress__header');
+  hdr.appendChild(el('span', 'featured-progress__raised', `R$ ${fmt(item.raised_amount)}`));
+  hdr.appendChild(el('span', 'featured-progress__goal',   `meta R$ ${fmt(item.goal_amount)}`));
+  prog.appendChild(hdr);
+  const track = el('div', 'featured-progress__track');
+  const fill  = el('div', 'featured-progress__fill');
+  fill.style.width = item.progress_pct + '%';
+  track.appendChild(fill); prog.appendChild(track);
+  prog.appendChild(el('p', 'featured-progress__pct', `${item.progress_pct}% arrecadado`));
   body.appendChild(prog);
 
-  // Button
-  const btn = document.createElement('button');
-  btn.className = 'btn-primary';
-  btn.textContent = item.is_complete ? 'Meta atingida' : 'Contribuir para esta viagem';
-  if (item.is_complete) btn.disabled = true;
-  else btn.addEventListener('click', e => { e.stopPropagation(); openModal(item.id); });
+  const btn = el('button', 'btn-primary', item.is_complete ? 'Meta atingida' : 'Contribuir para esta viagem');
+  btn.disabled = item.is_complete;
+  if (!item.is_complete) btn.addEventListener('click', e => { e.stopPropagation(); openModal(item.id); });
   body.appendChild(btn);
-
   card.appendChild(body);
-  section.appendChild(card);
+  sec.appendChild(card);
 
-  // Sub-items
+  // — Sub-items —
   if (item.children && item.children.length) {
-    const subSection = document.createElement('div');
-    subSection.className = 'sub-section';
-    subSection.style.marginTop = '1.5rem';
-
-    const subTitle = document.createElement('p');
-    subTitle.className = 'sub-section__title';
-    subTitle.textContent = 'Experiências incluídas na viagem';
-    subSection.appendChild(subTitle);
-
-    const grid = document.createElement('div');
-    grid.className = 'sub-grid';
-    item.children.forEach((child, ci) => {
-      grid.appendChild(buildSubCard(child, ci));
-    });
-    subSection.appendChild(grid);
-    section.appendChild(subSection);
+    const sub = el('div', 'sub-section');
+    const title = el('p', 'sub-section__title', 'Experiências incluídas na viagem');
+    sub.appendChild(title);
+    const grid = el('div', 'sub-grid');
+    item.children.forEach((child, ci) => grid.appendChild(mkSubCard(child, ci)));
+    sub.appendChild(grid);
+    sec.appendChild(sub);
   }
-
-  return section;
+  return sec;
 }
 
-function buildFeaturedProgress(item) {
-  const wrap = document.createElement('div');
-  wrap.className = 'featured-progress';
-
-  const header = document.createElement('div');
-  header.className = 'featured-progress__header';
-  header.appendChild(safeNode('span', `R$ ${fmt(item.raised_amount)}`, 'featured-progress__raised'));
-  header.appendChild(safeNode('span', `meta R$ ${fmt(item.goal_amount)}`, 'featured-progress__goal'));
-  wrap.appendChild(header);
-
-  const track = document.createElement('div');
-  track.className = 'featured-progress__track';
-  const fill = document.createElement('div');
-  fill.className = 'featured-progress__fill';
-  fill.style.width = item.progress_pct + '%';
-  track.appendChild(fill);
-  wrap.appendChild(track);
-
-  wrap.appendChild(safeNode('p', `${item.progress_pct}% arrecadado`, 'featured-progress__pct'));
-  return wrap;
-}
-
-// ─── Sub-item card ────────────────────────────────────────────────────────────
-function buildSubCard(item, idx) {
-  const card = document.createElement('div');
-  card.className = `travel-card${item.is_complete ? ' travel-card--complete' : ''}`;
-  card.style.animationDelay = `${idx * 0.07}s`;
+// ── Sub card ───────────────────────────────────────────────────────────────────
+function mkSubCard(item, idx) {
+  const card = el('div', `travel-card${item.is_complete ? ' travel-card--complete' : ''}`);
+  card.style.animationDelay = `${idx * .07}s`;
   if (!item.is_complete) {
     card.addEventListener('click', () => openModal(item.id));
-    card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
+    card.setAttribute('role', 'button');
+    card.addEventListener('keydown', e => { if (e.key === 'Enter') openModal(item.id); });
   }
 
-  // Image
-  const imgWrap = document.createElement('div');
-  imgWrap.className = 'travel-card__img-wrap';
-  if (item.image_url) {
+  const imgs    = item.images || [];
+  const imgWrap = el('div', 'travel-card__img-wrap');
+  if (imgs.length) {
     const img = document.createElement('img');
     img.className = 'travel-card__img';
-    img.src = item.image_url;
-    img.alt = item.name;
-    img.loading = 'lazy';
+    img.src = imgs[0]; img.alt = item.name; img.loading = 'lazy';
     imgWrap.appendChild(img);
+    if (imgs.length > 1) imgWrap.appendChild(el('span', 'travel-card__img-count', `+${imgs.length - 1}`));
   } else {
-    imgWrap.appendChild(safeNode('div', '✈', 'travel-card__img-placeholder'));
+    imgWrap.appendChild(el('div', 'travel-card__img-placeholder', '✈'));
   }
-  imgWrap.appendChild(safeNode('span', item.category, 'travel-card__cat-badge'));
-  if (item.is_complete) imgWrap.appendChild(safeNode('span', 'Meta atingida', 'travel-card__complete-badge'));
+  imgWrap.appendChild(el('span', 'travel-card__cat-badge', item.category));
+  if (item.is_complete) imgWrap.appendChild(el('span', 'travel-card__complete-badge', 'Meta atingida'));
   card.appendChild(imgWrap);
 
-  // Body
-  const body = document.createElement('div');
-  body.className = 'travel-card__body';
-  body.appendChild(safeNode('h4', item.name, 'travel-card__name'));
-  if (item.description) body.appendChild(safeNode('p', item.description, 'travel-card__desc'));
+  const body = el('div', 'travel-card__body');
+  body.appendChild(el('h4', 'travel-card__name', item.name));
+  if (item.description) body.appendChild(el('p', 'travel-card__desc', item.description));
+  body.appendChild(mkCardProgress(item));
 
-  body.appendChild(buildCardProgress(item));
-
-  const btn = document.createElement('button');
-  btn.className = `travel-card__btn${item.is_complete ? ' travel-card__btn--complete' : ''}`;
-  btn.textContent = item.is_complete ? 'Meta atingida' : 'Contribuir';
-  if (item.is_complete) btn.disabled = true;
-  else btn.addEventListener('click', e => { e.stopPropagation(); openModal(item.id); });
+  const btn = el('button', `travel-card__btn${item.is_complete ? ' travel-card__btn--complete' : ''}`,
+                 item.is_complete ? 'Meta atingida' : 'Contribuir');
+  btn.disabled = item.is_complete;
+  if (!item.is_complete) btn.addEventListener('click', e => { e.stopPropagation(); openModal(item.id); });
   body.appendChild(btn);
-
   card.appendChild(body);
   return card;
 }
 
-function buildCardProgress(item) {
-  const wrap = document.createElement('div');
-  wrap.className = 'card-progress';
-
-  const header = document.createElement('div');
-  header.className = 'card-progress__header';
-  header.appendChild(safeNode('span', `R$ ${fmt(item.raised_amount)}`, 'card-progress__raised'));
-  header.appendChild(safeNode('span', `meta R$ ${fmt(item.goal_amount)}`, 'card-progress__goal'));
-  wrap.appendChild(header);
-
-  const track = document.createElement('div');
-  track.className = 'card-progress__track';
-  const fill = document.createElement('div');
-  fill.className = 'card-progress__fill';
-  fill.style.width = item.progress_pct + '%';
-  track.appendChild(fill);
-  wrap.appendChild(track);
-
-  wrap.appendChild(safeNode('p', `${item.progress_pct}% arrecadado`, 'card-progress__pct'));
-  return wrap;
+function mkCardProgress(item) {
+  const w = el('div','card-progress');
+  const h = el('div','card-progress__header');
+  h.appendChild(el('span','card-progress__raised',`R$ ${fmt(item.raised_amount)}`));
+  h.appendChild(el('span','card-progress__goal',  `meta R$ ${fmt(item.goal_amount)}`));
+  w.appendChild(h);
+  const t = el('div','card-progress__track');
+  const f = el('div','card-progress__fill'); f.style.width = item.progress_pct + '%';
+  t.appendChild(f); w.appendChild(t);
+  w.appendChild(el('p','card-progress__pct',`${item.progress_pct}% arrecadado`));
+  return w;
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// ── Lightbox ───────────────────────────────────────────────────────────────────
+function openLightbox(imgs, startIdx) {
+  LB.imgs = imgs; LB.idx = startIdx;
+  updateLightbox();
+  $('lightbox').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  $('lightbox').classList.add('hidden');
+  if (!$('modal').classList.contains('hidden')) return; // keep body locked if modal open
+  document.body.style.overflow = '';
+}
+function updateLightbox() {
+  $('lightboxImg').src    = LB.imgs[LB.idx];
+  $('lightboxCounter').textContent = `${LB.idx + 1} / ${LB.imgs.length}`;
+  $('lightboxPrev').style.visibility = LB.idx > 0 ? 'visible' : 'hidden';
+  $('lightboxNext').style.visibility = LB.idx < LB.imgs.length - 1 ? 'visible' : 'hidden';
+}
+function bindLightbox() {
+  $('lightboxClose').addEventListener('click', closeLightbox);
+  $('lightbox').addEventListener('click', e => { if (e.target === $('lightbox')) closeLightbox(); });
+  $('lightboxPrev').addEventListener('click', () => { if (LB.idx > 0) { LB.idx--; updateLightbox(); } });
+  $('lightboxNext').addEventListener('click', () => { if (LB.idx < LB.imgs.length-1) { LB.idx++; updateLightbox(); } });
+  document.addEventListener('keydown', e => {
+    if ($('lightbox').classList.contains('hidden')) return;
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  { if (LB.idx > 0)               { LB.idx--; updateLightbox(); } }
+    if (e.key === 'ArrowRight') { if (LB.idx < LB.imgs.length-1){ LB.idx++; updateLightbox(); } }
+  });
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────────
 function findItem(id) {
-  for (const root of state.items) {
-    if (root.id === id) return root;
-    if (root.children) {
-      const child = root.children.find(c => c.id === id);
-      if (child) return child;
-    }
+  for (const r of S.items) {
+    if (r.id === id) return r;
+    if (r.children) { const c = r.children.find(x => x.id === id); if (c) return c; }
   }
   return null;
 }
@@ -243,192 +223,176 @@ function findItem(id) {
 function openModal(id) {
   const item = findItem(id);
   if (!item) return;
-  state.selected = item;
-  state.amount   = 0;
+  S.selected = item; S.amount = 0;
 
-  setText(document.getElementById('s1Name'), item.name);
-  document.getElementById('s1Fill').style.width = item.progress_pct + '%';
-  setText(document.getElementById('s1ProgressText'),
-    `R$ ${fmt(item.raised_amount)} arrecadado de R$ ${fmt(item.goal_amount)} (${item.progress_pct}%)`);
+  tx($('s1Name'), item.name);
+  $('s1Fill').style.width = item.progress_pct + '%';
+  tx($('s1ProgressText'), `R$ ${fmt(item.raised_amount)} arrecadado de R$ ${fmt(item.goal_amount)} (${item.progress_pct}%)`);
 
-  buildChips(item.goal_amount);
-  document.getElementById('amountInput').value     = '';
-  document.getElementById('step1Next').disabled    = true;
+  const rem = item.remaining_amount ?? (item.goal_amount - item.raised_amount);
+  tx($('s1Remaining'), `Faltam R$ ${fmt(Math.max(0, rem))} para completar a meta`);
+
+  buildChips(item.goal_amount, rem);
+  $('amountInput').value = '';
+  $('amountInput').max   = Math.floor(rem);
+  $('step1Next').disabled = true;
+  $('amountError').classList.add('hidden');
   document.querySelectorAll('.amount-chip').forEach(c => c.classList.remove('selected'));
 
   showStep(1);
-  document.getElementById('modal').classList.remove('hidden');
+  $('modal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
 
-function buildChips(goal) {
-  const suggestions = getSuggestions(goal);
-  const wrap = document.getElementById('amountSuggestions');
+function buildChips(goal, remaining) {
+  const suggestions = getSuggestions(goal, remaining);
+  const wrap = $('amountSuggestions');
   wrap.innerHTML = '';
   suggestions.forEach(v => {
-    const btn = document.createElement('button');
-    btn.className = 'amount-chip';
-    btn.textContent = `R$ ${fmt(v)}`;
-    btn.dataset.value = v;
-    btn.addEventListener('click', () => selectChip(btn, v));
-    wrap.appendChild(btn);
+    const b = el('button', 'amount-chip', `R$ ${fmt(v)}`);
+    b.dataset.value = v;
+    b.addEventListener('click', () => selectChip(b, v, remaining));
+    wrap.appendChild(b);
   });
 }
 
-function getSuggestions(goal) {
-  if (goal <= 100)  return [10, 20, 50, goal];
-  if (goal <= 300)  return [20, 50, 100, goal];
-  if (goal <= 600)  return [50, 100, 200, goal];
-  if (goal <= 1000) return [50, 100, 250, goal];
-  return [100, 200, 500, goal];
+function getSuggestions(goal, remaining) {
+  const cap = v => Math.min(v, remaining);
+  let base;
+  if (goal <= 100)  base = [10, 20, 50];
+  else if (goal <= 300)  base = [20, 50, 100];
+  else if (goal <= 600)  base = [50, 100, 200];
+  else if (goal <= 1000) base = [50, 100, 250];
+  else base = [100, 200, 500];
+  // Add "complete" option if different from last suggestion
+  const opts = base.map(cap).filter((v, i, a) => v > 0 && a.indexOf(v) === i);
+  if (remaining > 0 && !opts.includes(remaining)) opts.push(remaining);
+  return opts;
 }
 
-function selectChip(btn, value) {
+function selectChip(btn, value, remaining) {
+  const capped = Math.min(value, remaining);
   document.querySelectorAll('.amount-chip').forEach(c => c.classList.remove('selected'));
   btn.classList.add('selected');
-  document.getElementById('amountInput').value = '';
-  state.amount = value;
-  document.getElementById('step1Next').disabled = false;
+  $('amountInput').value = '';
+  S.amount = capped;
+  $('step1Next').disabled = false;
+  $('amountError').classList.add('hidden');
 }
 
 function closeModal() {
-  document.getElementById('modal').classList.add('hidden');
+  $('modal').classList.add('hidden');
   document.body.style.overflow = '';
 }
-
 function showStep(n) {
-  ['step1','step2','step3'].forEach(id => document.getElementById(id).classList.add('hidden'));
-  document.getElementById(`step${n}`).classList.remove('hidden');
+  ['step1','step2','step3'].forEach(id => $(id).classList.add('hidden'));
+  $(`step${n}`).classList.remove('hidden');
 }
 
-// ─── Events ───────────────────────────────────────────────────────────────────
-function bindEvents() {
-  document.getElementById('modalClose').addEventListener('click', closeModal);
-  document.getElementById('modal').addEventListener('click', e => {
-    if (e.target === document.getElementById('modal')) closeModal();
-  });
-  document.getElementById('step3Close').addEventListener('click', closeModal);
+// ── Events ─────────────────────────────────────────────────────────────────────
+function bindModal() {
+  $('modalClose').addEventListener('click', closeModal);
+  $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+  $('step3Close').addEventListener('click', closeModal);
 
-  document.getElementById('amountInput').addEventListener('input', e => {
+  $('amountInput').addEventListener('input', e => {
+    const remaining = S.selected ? (S.selected.remaining_amount ?? S.selected.goal_amount) : 50000;
     const v = parseFloat(e.target.value);
     document.querySelectorAll('.amount-chip').forEach(c => c.classList.remove('selected'));
-    if (v >= 1 && v <= 50000) {
-      state.amount = v;
-      document.getElementById('step1Next').disabled = false;
+    $('amountError').classList.add('hidden');
+
+    if (v >= 1 && v <= remaining) {
+      S.amount = v;
+      $('step1Next').disabled = false;
+    } else if (v > remaining) {
+      S.amount = remaining;
+      $('amountInput').value = remaining;
+      tx($('amountError'), `Valor máximo disponível: R$ ${fmt(remaining)}`);
+      $('amountError').classList.remove('hidden');
+      $('step1Next').disabled = false;
     } else {
-      state.amount = 0;
-      document.getElementById('step1Next').disabled = true;
+      S.amount = 0;
+      $('step1Next').disabled = true;
     }
   });
 
-  document.getElementById('step1Next').addEventListener('click', () => {
-    document.getElementById('giverName').value    = '';
-    document.getElementById('giverMessage').value = '';
-    document.getElementById('giverName').style.borderColor = '';
+  $('step1Next').addEventListener('click', () => {
+    $('giverName').value    = '';
+    $('giverMessage').value = '';
+    $('giverName').style.borderColor = '';
     showStep(2);
   });
+  $('step2Back').addEventListener('click', () => showStep(1));
+  $('step2Confirm').addEventListener('click', doConfirm);
 
-  document.getElementById('step2Back').addEventListener('click', () => showStep(1));
-  document.getElementById('step2Confirm').addEventListener('click', confirm);
-
-  document.getElementById('copyPixKey').addEventListener('click', () => {
-    const key = document.getElementById('s3PixKey').textContent;
+  $('copyPixKey').addEventListener('click', () => {
+    const key = $('s3PixKey').textContent;
     navigator.clipboard.writeText(key).catch(() => {});
-    const btn = document.getElementById('copyPixKey');
-    btn.textContent = 'Copiado!';
-    setTimeout(() => { btn.textContent = 'Copiar chave Pix'; }, 2000);
+    const b = $('copyPixKey');
+    b.textContent = 'Copiado!';
+    setTimeout(() => { b.textContent = 'Copiar chave Pix'; }, 2000);
   });
 }
 
-// ─── Confirm ──────────────────────────────────────────────────────────────────
-async function confirm() {
-  const nameInput = document.getElementById('giverName');
-  const name      = nameInput.value.trim().slice(0, 200);
-  const message   = document.getElementById('giverMessage').value.trim().slice(0, 500);
+// ── Confirm ────────────────────────────────────────────────────────────────────
+async function doConfirm() {
+  const name    = $('giverName').value.trim().slice(0, 200);
+  const message = $('giverMessage').value.trim().slice(0, 500);
+  if (!name) { $('giverName').focus(); $('giverName').style.borderColor = '#c0392b'; return; }
+  $('giverName').style.borderColor = '';
+  if (!S.amount || S.amount < 1) { showStep(1); return; }
 
-  if (!name) {
-    nameInput.focus();
-    nameInput.style.borderColor = '#c0392b';
-    return;
-  }
-  nameInput.style.borderColor = '';
-
-  if (!state.amount || state.amount < 1) {
-    showStep(1);
-    return;
-  }
-
-  const btn = document.getElementById('step2Confirm');
-  btn.disabled    = true;
-  btn.textContent = 'Confirmando...';
+  const btn = $('step2Confirm');
+  btn.disabled = true; btn.textContent = 'Confirmando...';
 
   try {
-    const res = await fetch('/api/contribute', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        travel_item_id: state.selected.id,
-        giver_name:     name,
-        message,
-        amount:         state.amount,
-      }),
+    const r = await fetch('/api/contribute', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ travel_item_id: S.selected.id, giver_name: name, message, amount: S.amount })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro');
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Erro');
 
-    // Refresh in background
-    loadItems();
+    load(); // refresh in background
 
-    // Populate step 3 using textContent (no XSS risk)
-    setText(document.getElementById('s3Name'),    name);
-    setText(document.getElementById('s3Amount'),  `R$ ${fmt(state.amount)}`);
-    setText(document.getElementById('s3PixName'), data.pix_name);
-    setText(document.getElementById('s3PixKey'),  data.pix_key);
+    tx($('s3Name'),    name);
+    tx($('s3Amount'),  `R$ ${fmt(d.amount ?? S.amount)}`);
+    tx($('s3PixName'), d.pix_name);
+    tx($('s3PixKey'),  d.pix_key);
 
-    const msgWrap = document.getElementById('s3MessageWrap');
-    if (message) {
-      setText(document.getElementById('s3Message'), `"${message}"`);
-      msgWrap.classList.remove('hidden');
-    } else {
-      msgWrap.classList.add('hidden');
-    }
+    const msgWrap = $('s3MessageWrap');
+    if (message) { tx($('s3Message'), `"${message}"`); msgWrap.classList.remove('hidden'); }
+    else          { msgWrap.classList.add('hidden'); }
 
-    generateQR(state.amount);
+    genQR(d.amount ?? S.amount);
     showStep(3);
-  } catch (e) {
+  } catch(e) {
     alert(e.message || 'Ocorreu um erro. Tente novamente.');
   } finally {
-    btn.disabled    = false;
-    btn.textContent = 'Confirmar';
+    btn.disabled = false; btn.textContent = 'Confirmar';
   }
 }
 
-async function generateQR(amount) {
-  const qrEl = document.getElementById('pixQr');
+async function genQR(amount) {
+  const qrEl = $('pixQr');
   qrEl.innerHTML = '<div class="spinner"></div>';
   try {
-    const res  = await fetch('/api/pix-qrcode', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ amount }),
+    const r = await fetch('/api/pix-qrcode', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({amount})
     });
-    const data = await res.json();
-    const img  = document.createElement('img');
-    img.alt    = 'QR Code Pix';
-    img.src    = data.qrcode;      // data: URI — safe
-    qrEl.innerHTML = '';
-    qrEl.appendChild(img);
+    const d = await r.json();
+    const img = document.createElement('img');
+    img.alt = 'QR Code Pix'; img.src = d.qrcode;
+    qrEl.innerHTML = ''; qrEl.appendChild(img);
   } catch {
     qrEl.textContent = 'QR indisponível';
-    qrEl.style.fontSize = '.75rem';
-    qrEl.style.color    = 'var(--text-light)';
+    Object.assign(qrEl.style, {fontSize:'.75rem', color:'var(--text-light)', textAlign:'center'});
   }
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
-function fmt(n) {
-  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-}
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function fmt(n) { return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
 init();

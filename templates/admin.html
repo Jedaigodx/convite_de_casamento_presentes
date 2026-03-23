@@ -1,203 +1,178 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Painel dos Noivos · T & V</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/main.css" />
-  <link rel="stylesheet" href="/static/css/admin.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+  <link rel="stylesheet" href="/static/css/admin.css"/>
 </head>
 <body class="admin-body">
 
-  <!-- ── Login ── -->
-  <div class="login-screen" id="loginScreen">
-    <div class="login-card">
-      <div class="login-monogram">T <span>✦</span> V</div>
-      <h2 class="login-title">Painel dos Noivos</h2>
-      <p class="login-subtitle">Acesso restrito</p>
-      <div class="form-group">
-        <label class="form-label">Senha</label>
-        <input class="form-input" type="password" id="adminPassword" placeholder="" />
-      </div>
-      <p class="login-error hidden" id="loginError">Senha incorreta.</p>
-      <button class="btn-primary btn-block" id="loginBtn">Entrar</button>
+<!-- Login -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-monogram">T <span>✦</span> V</div>
+    <h2 class="login-title">Painel dos Noivos</h2>
+    <p class="login-subtitle">Acesso restrito</p>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input class="form-input" type="password" id="adminPassword" placeholder="••••••••"/>
     </div>
+    <p class="login-error hidden" id="loginError">Senha incorreta.</p>
+    <button class="btn-primary btn-block" id="loginBtn">Entrar</button>
   </div>
+</div>
 
-  <!-- ── Panel ── -->
-  <div class="admin-panel hidden" id="adminPanel">
+<!-- Panel -->
+<div class="admin-panel hidden" id="adminPanel">
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">
+      <span class="sidebar-monogram">T ✦ V</span>
+      <span class="sidebar-label">Painel</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="dashboard">Visão geral</button>
+      <button class="nav-item" data-tab="items">Experiências</button>
+      <button class="nav-item" data-tab="contributions">Contribuições</button>
+    </nav>
+    <button class="sidebar-logout" id="logoutBtn">Sair</button>
+  </aside>
 
-    <aside class="admin-sidebar">
-      <div class="sidebar-brand">
-        <span class="sidebar-monogram">T ✦ V</span>
-        <span class="sidebar-label">Painel</span>
+  <div class="admin-content">
+
+    <!-- Dashboard -->
+    <div class="tab-panel active" id="tab-dashboard">
+      <h2 class="panel-title">Visão Geral</h2>
+      <div class="stats-grid">
+        <div class="stat-card stat-card--highlight"><span class="stat-value" id="stat-raised">—</span><span class="stat-label">Total arrecadado</span></div>
+        <div class="stat-card stat-card--highlight"><span class="stat-value" id="stat-confirmed-val">—</span><span class="stat-label">Pix confirmado</span></div>
+        <div class="stat-card"><span class="stat-value" id="stat-goal">—</span><span class="stat-label">Meta total</span></div>
+        <div class="stat-card"><span class="stat-value" id="stat-contribs">—</span><span class="stat-label">Contribuições</span></div>
       </div>
-      <nav class="sidebar-nav">
-        <button class="nav-item active" data-tab="dashboard">Visão geral</button>
-        <button class="nav-item" data-tab="items">Experiências</button>
-        <button class="nav-item" data-tab="contributions">Contribuições</button>
-      </nav>
-      <button class="sidebar-logout" id="logoutBtn">Sair</button>
-    </aside>
+      <div class="overall-progress">
+        <div class="overall-progress__header">
+          <span class="overall-progress__label">Progresso geral da viagem</span>
+          <span class="overall-progress__pct" id="overallPct">0%</span>
+        </div>
+        <div class="overall-progress__track"><div class="overall-progress__fill" id="overallFill" style="width:0%"></div></div>
+        <p class="overall-progress__caption" id="overallCaption"></p>
+      </div>
+      <h3 class="panel-subtitle" style="margin-top:2rem">Por experiência</h3>
+      <div class="items-progress-list" id="itemsProgressList"></div>
+      <h3 class="panel-subtitle" style="margin-top:2rem">Últimas contribuições</h3>
+      <div class="contributions-list" id="recentContribs"></div>
+    </div>
 
-    <div class="admin-content">
+    <!-- Items -->
+    <div class="tab-panel" id="tab-items">
+      <div class="panel-header">
+        <h2 class="panel-title">Gerenciar Experiências</h2>
+        <button class="btn-primary" id="addItemBtn">+ Nova experiência</button>
+      </div>
+      <div class="items-grid" id="adminItemsGrid"></div>
+    </div>
 
-      <!-- ── Dashboard ── -->
-      <div class="tab-panel active" id="tab-dashboard">
-        <h2 class="panel-title">Visão Geral</h2>
+    <!-- Contributions -->
+    <div class="tab-panel" id="tab-contributions">
+      <h2 class="panel-title">Todas as Contribuições</h2>
+      <div class="panel-filters">
+        <select class="form-input" id="contribFilter" style="max-width:200px">
+          <option value="all">Todos os status</option>
+          <option value="pending">Pendente</option>
+          <option value="confirmed">Confirmado</option>
+        </select>
+      </div>
+      <div class="contributions-list full" id="allContribs"></div>
+    </div>
 
-        <!-- Main stats -->
-        <div class="stats-grid" id="statsGrid">
-          <div class="stat-card stat-card--highlight">
-            <span class="stat-value" id="stat-raised">—</span>
-            <span class="stat-label">Total arrecadado</span>
+  </div>
+</div>
+
+<!-- Item Modal -->
+<div class="modal-overlay hidden" id="itemModal">
+  <div class="modal modal--wide">
+    <button class="modal-close" id="itemModalClose">&times;</button>
+    <h3 class="modal-section-title" id="itemModalTitle">Nova Experiência</h3>
+    <input type="hidden" id="editItemId"/>
+
+    <div class="item-modal-layout">
+      <!-- Photos -->
+      <div class="upload-col">
+        <p class="form-label">Fotos <span class="optional">(até 5)</span></p>
+
+        <!-- Main preview / click area -->
+        <div class="upload-preview" id="uploadPreview">
+          <div class="upload-placeholder" id="uploadPlaceholder">
+            <span class="upload-icon">+</span>
+            <span class="upload-hint">Clique para adicionar foto</span>
+            <span class="upload-hint-sub">JPG, PNG ou WebP · máx. 8MB</span>
           </div>
-          <div class="stat-card stat-card--highlight">
-            <span class="stat-value" id="stat-confirmed-val">—</span>
-            <span class="stat-label">Pix confirmado</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="stat-goal">—</span>
-            <span class="stat-label">Meta total</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-value" id="stat-contribs">—</span>
-            <span class="stat-label">Contribuições</span>
-          </div>
+          <img class="upload-main-img hidden" id="uploadMainImg" alt="Preview"/>
         </div>
 
-        <!-- Overall progress bar -->
-        <div class="overall-progress" id="overallProgress">
-          <div class="overall-progress__header">
-            <span class="overall-progress__label">Progresso geral da viagem</span>
-            <span class="overall-progress__pct" id="overallPct">0%</span>
-          </div>
-          <div class="overall-progress__track">
-            <div class="overall-progress__fill" id="overallFill" style="width:0%"></div>
-          </div>
-          <p class="overall-progress__caption" id="overallCaption"></p>
-        </div>
+        <!-- Thumbnails strip -->
+        <div class="upload-thumbs" id="uploadThumbs"></div>
 
-        <!-- Per-item progress -->
-        <h3 class="panel-subtitle" style="margin-top:2rem">Por experiência</h3>
-        <div class="items-progress-list" id="itemsProgressList"></div>
-
-        <!-- Recent contributions -->
-        <h3 class="panel-subtitle" style="margin-top:2rem">Últimas contribuições</h3>
-        <div class="contributions-list" id="recentContribs"></div>
+        <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp" class="hidden" multiple/>
+        <button class="btn-secondary btn-block" id="chooseFileBtn" style="margin-top:.5rem;font-size:.7rem">
+          Adicionar foto
+        </button>
+        <p class="upload-status" id="uploadStatus"></p>
       </div>
 
-      <!-- ── Items ── -->
-      <div class="tab-panel" id="tab-items">
-        <div class="panel-header">
-          <h2 class="panel-title">Gerenciar Experiências</h2>
-          <button class="btn-primary" id="addItemBtn">+ Nova experiência</button>
-        </div>
-        <div class="items-grid" id="adminItemsGrid"></div>
-      </div>
-
-      <!-- ── Contributions ── -->
-      <div class="tab-panel" id="tab-contributions">
-        <h2 class="panel-title">Todas as Contribuições</h2>
-        <div class="panel-filters">
-          <select class="form-input" id="contribFilter" style="max-width:200px">
-            <option value="all">Todos os status</option>
-            <option value="pending">Pendente</option>
-            <option value="confirmed">Confirmado</option>
+      <!-- Fields -->
+      <div class="item-modal-fields">
+        <div class="form-group">
+          <label class="form-label">Tipo <span class="required">*</span></label>
+          <select class="form-input" id="itemParentId">
+            <option value="">Destino principal (raiz)</option>
           </select>
+          <p class="field-hint">Selecione um destino se este for um passeio dentro de uma viagem.</p>
         </div>
-        <div class="contributions-list full" id="allContribs"></div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── Modal: Add/Edit Item ── -->
-  <div class="modal-overlay hidden" id="itemModal">
-    <div class="modal modal--wide">
-      <button class="modal-close" id="itemModalClose">&times;</button>
-      <h3 class="modal-section-title" id="itemModalTitle">Nova Experiência</h3>
-      <input type="hidden" id="editItemId" />
-
-      <div class="item-modal-layout">
-        <!-- Left: image upload -->
-        <div class="upload-area" id="uploadArea">
-          <div class="upload-preview" id="uploadPreview">
-            <div class="upload-placeholder" id="uploadPlaceholder">
-              <span class="upload-icon">+</span>
-              <span class="upload-hint">Clique ou arraste uma foto</span>
-              <span class="upload-hint-sub">JPG, PNG ou WebP · máx. 8MB</span>
-            </div>
-            <img class="upload-img hidden" id="uploadImg" alt="Preview" />
-          </div>
-          <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp" class="hidden" />
-          <button class="btn-secondary btn-block" id="chooseFileBtn" style="margin-top:0.6rem;font-size:0.7rem">
-            Escolher foto
-          </button>
-          <p class="upload-status" id="uploadStatus"></p>
-          <input type="hidden" id="itemImageUrl" />
+        <div class="form-group">
+          <label class="form-label">Nome <span class="required">*</span></label>
+          <input class="form-input" type="text" id="itemName" placeholder="Ex: Bondinho do Pão de Açúcar"/>
         </div>
-
-        <!-- Right: fields -->
-        <div class="item-modal-fields">
+        <div class="form-group">
+          <label class="form-label">Descrição</label>
+          <textarea class="form-textarea" id="itemDescription" rows="3" placeholder="Conte um pouco sobre essa experiência..."></textarea>
+        </div>
+        <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Nome da experiência <span class="required">*</span></label>
-            <input class="form-input" type="text" id="itemName" placeholder="" />
+            <label class="form-label">Meta (R$) <span class="required">*</span></label>
+            <input class="form-input" type="number" id="itemGoal" min="1" step="1" placeholder="Ex: 500"/>
           </div>
           <div class="form-group">
-            <label class="form-label">Descrição</label>
-            <textarea class="form-textarea" id="itemDescription" rows="3"
-                      placeholder="Conte um pouco sobre essa experiência..."></textarea>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Meta (R$) <span class="required">*</span></label>
-              <input class="form-input" type="number" id="itemGoal" min="1" step="1" placeholder="Ex: 500" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Categoria</label>
-              <select class="form-input" id="itemCategory">
-                <option>Passeio</option>
-                <option>Hospedagem</option>
-                <option>Gastronomia</option>
-                <option>Transporte</option>
-                <option>Aventura</option>
-                <option>Cultura</option>
-                <option>Viagem</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-              <label class="form-label">Tipo de item</label>
-              <select class="form-input" id="itemParentId">
-                <option value="">Destino principal (raiz)</option>
-              </select>
-              <p style="font-size:.68rem;color:var(--text-light);margin-top:.3rem">
-                Selecione um destino principal se este for um passeio/experiência dentro de uma viagem.
-              </p>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Ordem de exibição</label>
-              <input class="form-input" type="number" id="itemOrder" min="0" value="0" />
-            </div>
-            <div class="form-group form-group--check" style="align-self:flex-end;padding-bottom:0.2rem">
-              <input type="checkbox" id="itemIsActive" checked />
-              <label class="form-label" for="itemIsActive">Visível no site</label>
-            </div>
+            <label class="form-label">Categoria</label>
+            <select class="form-input" id="itemCategory">
+              <option>Passeio</option><option>Hospedagem</option><option>Gastronomia</option>
+              <option>Transporte</option><option>Aventura</option><option>Cultura</option><option>Viagem</option>
+            </select>
           </div>
         </div>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn-secondary" id="itemModalCancel">Cancelar</button>
-        <button class="btn-primary" id="itemModalSave">Salvar experiência</button>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ordem</label>
+            <input class="form-input" type="number" id="itemOrder" min="0" value="0"/>
+          </div>
+          <div class="form-group form-group--check" style="align-self:flex-end;padding-bottom:.25rem">
+            <input type="checkbox" id="itemIsActive" checked/>
+            <label class="form-label" for="itemIsActive">Visível no site</label>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script src="/static/js/admin.js"></script>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="itemModalCancel">Cancelar</button>
+      <button class="btn-primary" id="itemModalSave">Salvar experiência</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/admin.js"></script>
 </body>
 </html>
